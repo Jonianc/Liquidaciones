@@ -5,6 +5,23 @@ class LQM_CPT {
 
     const CPT = 'lqm_liquidacion';
 
+    const CAPS = [
+        'edit_post' => 'edit_lqm_liquidacion',
+        'read_post' => 'read_lqm_liquidacion',
+        'delete_post' => 'delete_lqm_liquidacion',
+        'edit_posts' => 'edit_lqm_liquidaciones',
+        'edit_others_posts' => 'edit_others_lqm_liquidaciones',
+        'publish_posts' => 'publish_lqm_liquidaciones',
+        'read_private_posts' => 'read_private_lqm_liquidaciones',
+        'delete_posts' => 'delete_lqm_liquidaciones',
+        'delete_private_posts' => 'delete_private_lqm_liquidaciones',
+        'delete_published_posts' => 'delete_published_lqm_liquidaciones',
+        'delete_others_posts' => 'delete_others_lqm_liquidaciones',
+        'edit_private_posts' => 'edit_private_lqm_liquidaciones',
+        'edit_published_posts' => 'edit_published_lqm_liquidaciones',
+        'create_posts' => 'create_lqm_liquidaciones',
+    ];
+
     public static function init() {
         add_action('init', [__CLASS__, 'register_cpt']);
         add_action('add_meta_boxes', [__CLASS__, 'add_metaboxes']);
@@ -26,7 +43,33 @@ class LQM_CPT {
             'show_ui' => true,
             'menu_icon' => 'dashicons-media-document',
             'supports' => ['title'],
+            'map_meta_cap' => true,
+            'capability_type' => ['lqm_liquidacion', 'lqm_liquidaciones'],
+            'capabilities' => self::CAPS,
         ]);
+    }
+
+    public static function activate() {
+        self::register_cpt();
+        self::grant_caps_to_roles();
+        flush_rewrite_rules();
+    }
+
+    public static function deactivate() {
+        flush_rewrite_rules();
+    }
+
+    private static function grant_caps_to_roles() {
+        $roles = ['administrator'];
+
+        foreach ($roles as $role_name) {
+            $role = get_role($role_name);
+            if (!$role) continue;
+
+            foreach (self::CAPS as $cap) {
+                $role->add_cap($cap);
+            }
+        }
     }
 
     public static function add_metaboxes() {
@@ -70,7 +113,8 @@ class LQM_CPT {
 
             <div>
                 <label for="lqm_inicio">Fecha Inicio</label>
-                <input type="date" id="lqm_inicio" name="lqm_inicio" value="<?php echo esc_attr($m('_lqm_inicio')); ?>">
+                <input type="text" id="lqm_inicio" name="lqm_inicio" placeholder="YYYY-MM-DD o texto libre" value="<?php echo esc_attr($m('_lqm_inicio')); ?>">
+                <div class="lqm-small">Compatibilidad legacy: mantiene fechas históricas no-ISO sin borrarlas al re-guardar.</div>
             </div>
             <div>
                 <label for="lqm_cargo">Cargo</label>

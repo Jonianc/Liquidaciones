@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.5] - 2026-02-26
+### Changed
+- Se implementó hardening de permisos del CPT `lqm_liquidacion` con capabilities propias + `map_meta_cap`, evitando depender de las capacidades genéricas de `post`.
+- Se agregaron hooks de activación/desactivación para registrar CPT, asignar capabilities a `administrator` y refrescar reglas de reescritura.
+- Se corrigió regresión de compatibilidad en `Fecha Inicio`: se revierte `lqm_inicio` a `type="text"` para preservar valores legacy no-ISO al abrir y re-guardar registros existentes.
+
 ## [0.1.4] - 2026-02-26
 ### Changed
 - Se mejoró la UX del formulario de liquidación con validaciones en vivo en admin (obligatorios, RUT con dígito verificador, rangos de días y suma máxima de 31 días).
