@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.7] - 2026-02-26
+### Changed
+- Se mejoró el estilo base del formulario para que no dependa del theme, con inputs, labels, tabla y estados de foco/error consistentes usando CSS propio del plugin.
+- Se reforzó la jerarquía visual del metabox agregando contenedores de campo y espaciados uniformes para mejorar legibilidad y captura de datos.
+- Se cambió el botón de eliminar ítem no imponible de “X” a “Quitar”, incluyendo etiqueta `aria-label`, para mejorar claridad y accesibilidad.
+
 ## [0.1.6] - 2026-02-26
 ### Changed
 - Se endureció el flujo de generación de PDF usando `admin-post.php` con acción dedicada (`action=lqm_pdf`) para evitar depender del front (`home_url`) y mejorar el contexto de permisos en admin.

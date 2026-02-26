@@ -13,7 +13,7 @@
                 tr.innerHTML = `
                     <td><input type="text" name="lqm_noimp_nombre[]" value=""></td>
                     <td><input type="number" name="lqm_noimp_monto[]" min="0" step="1" value=""></td>
-                    <td><button type="button" class="button lqm-del">X</button></td>
+                    <td><button type="button" class="button lqm-del" aria-label="Quitar item no imponible">Quitar</button></td>
                 `;
                 tbody.appendChild(tr);
             });

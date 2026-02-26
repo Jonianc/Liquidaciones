@@ -89,43 +89,44 @@ class LQM_CPT {
 
         ?>
 
+        <div class="lqm-form" data-lqm-form="liquidacion">
         <div class="lqm-grid">
-            <div>
+            <div class="lqm-field">
                 <label for="lqm_periodo">Periodo (ej: Febrero / 2026)</label>
                 <input type="text" id="lqm_periodo" name="lqm_periodo" required value="<?php echo esc_attr($m('_lqm_periodo')); ?>">
                 <p class="lqm-error" id="lqm_periodo_error" aria-live="polite"></p>
             </div>
-            <div>
+            <div class="lqm-field">
                 <label for="lqm_nombre">Nombre Trabajador</label>
                 <input type="text" id="lqm_nombre" name="lqm_nombre" required value="<?php echo esc_attr($m('_lqm_nombre')); ?>">
                 <p class="lqm-error" id="lqm_nombre_error" aria-live="polite"></p>
             </div>
-            <div>
+            <div class="lqm-field">
                 <label for="lqm_rut">RUT</label>
                 <input type="text" id="lqm_rut" name="lqm_rut" required aria-describedby="lqm_rut_help lqm_rut_error" value="<?php echo esc_attr($m('_lqm_rut')); ?>">
                 <div class="lqm-small" id="lqm_rut_help">Formato sugerido: 12.345.678-5</div>
                 <p class="lqm-error" id="lqm_rut_error" aria-live="polite"></p>
             </div>
-            <div>
+            <div class="lqm-field">
                 <label for="lqm_relacion">Relación Laboral</label>
                 <input type="text" id="lqm_relacion" name="lqm_relacion" value="<?php echo esc_attr($m('_lqm_relacion')); ?>">
             </div>
 
-            <div>
+            <div class="lqm-field">
                 <label for="lqm_inicio">Fecha Inicio</label>
                 <input type="text" id="lqm_inicio" name="lqm_inicio" placeholder="YYYY-MM-DD o texto libre" value="<?php echo esc_attr($m('_lqm_inicio')); ?>">
                 <div class="lqm-small">Compatibilidad legacy: mantiene fechas históricas no-ISO sin borrarlas al re-guardar.</div>
             </div>
-            <div>
+            <div class="lqm-field">
                 <label for="lqm_cargo">Cargo</label>
                 <input type="text" id="lqm_cargo" name="lqm_cargo" value="<?php echo esc_attr($m('_lqm_cargo')); ?>">
             </div>
-            <div>
+            <div class="lqm-field">
                 <label for="lqm_dias_trab">Días Trabajados</label>
                 <input type="number" id="lqm_dias_trab" name="lqm_dias_trab" min="0" max="31" step="1" value="<?php echo esc_attr($m('_lqm_dias_trab', 30)); ?>">
                 <p class="lqm-error" id="lqm_dias_trab_error" aria-live="polite"></p>
             </div>
-            <div>
+            <div class="lqm-field">
                 <label>Licencia / Inasistencias</label>
                 <div class="lqm-row">
                     <input type="number" id="lqm_dias_lic" name="lqm_dias_lic" min="0" max="31" step="1" placeholder="Licencia" value="<?php echo esc_attr($m('_lqm_dias_lic', 0)); ?>">
@@ -134,19 +135,19 @@ class LQM_CPT {
                 <p class="lqm-error" id="lqm_dias_error" aria-live="polite"></p>
             </div>
 
-            <div>
+            <div class="lqm-field">
                 <label for="lqm_sueldo_base">Sueldo Base (Imponible)</label>
                 <input type="number" id="lqm_sueldo_base" name="lqm_sueldo_base" min="0" step="1" value="<?php echo esc_attr($m('_lqm_sueldo_base', 0)); ?>">
                 <div class="lqm-small">MVP: Total Imponible = Sueldo Base</div>
                 <p class="lqm-error" id="lqm_sueldo_base_error" aria-live="polite"></p>
             </div>
 
-            <div>
+            <div class="lqm-field">
                 <label for="lqm_impuesto_unico">Impuesto Único (manual, MVP)</label>
                 <input type="number" id="lqm_impuesto_unico" name="lqm_impuesto_unico" min="0" step="1" value="<?php echo esc_attr($m('_lqm_impuesto_unico', 0)); ?>">
             </div>
 
-            <div>
+            <div class="lqm-field">
                 <label for="lqm_otros_desc">Otros Descuentos (manual)</label>
                 <input type="number" id="lqm_otros_desc" name="lqm_otros_desc" min="0" step="1" value="<?php echo esc_attr($m('_lqm_otros_desc', 0)); ?>">
             </div>
@@ -166,13 +167,13 @@ class LQM_CPT {
                         <tr>
                             <td><input type="text" name="lqm_noimp_nombre[]" value=""></td>
                             <td><input type="number" name="lqm_noimp_monto[]" min="0" step="1" value=""></td>
-                            <td><button type="button" class="button lqm-del">X</button></td>
+                            <td><button type="button" class="button lqm-del" aria-label="Quitar item no imponible">Quitar</button></td>
                         </tr>
                     <?php else : foreach ($no_imp as $row) : ?>
                         <tr>
                             <td><input type="text" name="lqm_noimp_nombre[]" value="<?php echo esc_attr($row['nombre'] ?? ''); ?>"></td>
                             <td><input type="number" name="lqm_noimp_monto[]" min="0" step="1" value="<?php echo esc_attr($row['monto'] ?? ''); ?>"></td>
-                            <td><button type="button" class="button lqm-del">X</button></td>
+                            <td><button type="button" class="button lqm-del" aria-label="Quitar item no imponible">Quitar</button></td>
                         </tr>
                     <?php endforeach; endif; ?>
                     </tbody>
@@ -190,6 +191,7 @@ class LQM_CPT {
                 }
                 ?>
             </div>
+        </div>
         </div>
         <?php
     }
