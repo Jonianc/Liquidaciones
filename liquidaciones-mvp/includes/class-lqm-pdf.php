@@ -13,8 +13,11 @@ class LQM_PDF {
         $id = (int) $_GET['lqm_pdf'];
         if (!$id) wp_die('ID inválido');
 
-        // Permisos MVP: quien pueda editar posts
-        if (!current_user_can('edit_posts')) wp_die('Sin permisos');
+        $post = get_post($id);
+        if (!$post) wp_die('Liquidación no encontrada');
+        if ($post->post_type !== LQM_CPT::CPT) wp_die('Tipo de documento inválido');
+
+        if (!current_user_can('edit_post', $id)) wp_die('Sin permisos');
 
         $nonce = isset($_GET['_wpnonce']) ? sanitize_text_field(wp_unslash($_GET['_wpnonce'])) : '';
         if (!wp_verify_nonce($nonce, 'lqm_pdf_'.$id)) wp_die('Nonce inválido');

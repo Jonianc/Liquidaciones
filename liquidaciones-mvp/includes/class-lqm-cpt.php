@@ -178,23 +178,31 @@ class LQM_CPT {
         if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
         if (!current_user_can('edit_post', $post_id)) return;
 
-        $fields = [
+        $text_fields = [
             '_lqm_periodo' => 'lqm_periodo',
             '_lqm_nombre' => 'lqm_nombre',
             '_lqm_rut' => 'lqm_rut',
             '_lqm_relacion' => 'lqm_relacion',
             '_lqm_inicio' => 'lqm_inicio',
             '_lqm_cargo' => 'lqm_cargo',
-            '_lqm_dias_trab' => 'lqm_dias_trab',
-            '_lqm_dias_lic' => 'lqm_dias_lic',
-            '_lqm_dias_inas' => 'lqm_dias_inas',
-            '_lqm_sueldo_base' => 'lqm_sueldo_base',
-            '_lqm_impuesto_unico' => 'lqm_impuesto_unico',
-            '_lqm_otros_desc' => 'lqm_otros_desc',
         ];
 
-        foreach ($fields as $meta => $post_key) {
+        foreach ($text_fields as $meta => $post_key) {
             $val = isset($_POST[$post_key]) ? sanitize_text_field(wp_unslash($_POST[$post_key])) : '';
+            update_post_meta($post_id, $meta, $val);
+        }
+
+        $numeric_fields = [
+            '_lqm_dias_trab' => ['key' => 'lqm_dias_trab', 'default' => 30, 'min' => 0, 'max' => 31],
+            '_lqm_dias_lic' => ['key' => 'lqm_dias_lic', 'default' => 0, 'min' => 0, 'max' => 31],
+            '_lqm_dias_inas' => ['key' => 'lqm_dias_inas', 'default' => 0, 'min' => 0, 'max' => 31],
+            '_lqm_sueldo_base' => ['key' => 'lqm_sueldo_base', 'default' => 0, 'min' => 0],
+            '_lqm_impuesto_unico' => ['key' => 'lqm_impuesto_unico', 'default' => 0, 'min' => 0],
+            '_lqm_otros_desc' => ['key' => 'lqm_otros_desc', 'default' => 0, 'min' => 0],
+        ];
+
+        foreach ($numeric_fields as $meta => $config) {
+            $val = self::read_numeric_from_post($config['key'], $config['default'], $config['min'], $config['max'] ?? null);
             update_post_meta($post_id, $meta, $val);
         }
 
@@ -204,17 +212,42 @@ class LQM_CPT {
         $n = max(count($names), count($montos));
         for ($i=0; $i<$n; $i++) {
             $nombre = sanitize_text_field(wp_unslash($names[$i] ?? ''));
-            $monto = sanitize_text_field(wp_unslash($montos[$i] ?? ''));
-            if ($nombre === '' && $monto === '') continue;
+            $monto = self::parse_non_negative_int($montos[$i] ?? 0);
+            if ($nombre === '' || $monto <= 0) continue;
             $rows[] = [
                 'nombre' => $nombre,
-                'monto'  => (int) preg_replace('/[^\d]/', '', (string)$monto),
+                'monto'  => $monto,
             ];
         }
         update_post_meta($post_id, '_lqm_no_imponible', $rows);
 
         // Clear cached FPDF path on save (in case plugins changed)
         delete_transient(LQM_FPDF::TRANSIENT_KEY);
+    }
+
+    private static function read_numeric_from_post($key, $default = 0, $min = 0, $max = null) {
+        if (!isset($_POST[$key])) return (int) $default;
+
+        $value = self::parse_non_negative_int($_POST[$key]);
+
+        if ($value < (int) $min) {
+            $value = (int) $min;
+        }
+
+        if ($max !== null && $value > (int) $max) {
+            $value = (int) $max;
+        }
+
+        return $value;
+    }
+
+    private static function parse_non_negative_int($raw) {
+        $value = is_scalar($raw) ? sanitize_text_field(wp_unslash((string) $raw)) : '';
+        $value = preg_replace('/[^\d]/', '', (string) $value);
+
+        if ($value === '') return 0;
+
+        return absint($value);
     }
 
     public static function pdf_url($post_id) {
