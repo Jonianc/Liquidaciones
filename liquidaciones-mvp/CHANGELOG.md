@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4] - 2026-02-26
+### Changed
+- Se mejoró la UX del formulario de liquidación con validaciones en vivo en admin (obligatorios, RUT con dígito verificador, rangos de días y suma máxima de 31 días).
+- Se añadieron mensajes de error accesibles por campo (`aria-live`) y enfoque automático al primer campo inválido al guardar.
+- Se reforzaron atributos HTML de inputs (`required`, `min`, `max`, `step`, `id/for`) para reducir errores de captura.
+- Se actualizó el estilo del metabox con estados visuales de error y comportamiento responsivo básico.
+
 ## [0.1.3] - 2026-02-26
 ### Changed
 - Se extrajeron los estilos y scripts inline del metabox de liquidaciones a archivos estáticos en `assets/`.

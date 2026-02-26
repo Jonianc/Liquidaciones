@@ -6,3 +6,13 @@
 .lqm-table{width:100%;border-collapse:collapse;margin-top:8px}
 .lqm-table th,.lqm-table td{border:1px solid #ddd;padding:8px}
 .lqm-btn{margin-top:10px}
+.lqm-error{margin:6px 0 0;color:#b32d2e;font-size:12px;min-height:16px}
+.lqm-input-error{border-color:#b32d2e !important;box-shadow:0 0 0 1px #b32d2e}
+
+@media (max-width: 1280px){
+  .lqm-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+@media (max-width: 782px){
+  .lqm-grid{grid-template-columns:1fr}
+}
