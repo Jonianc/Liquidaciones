@@ -224,6 +224,11 @@ class LQM_CPT {
 
     private static function parse_non_negative_int($raw) {
         $value = is_scalar($raw) ? sanitize_text_field(wp_unslash((string) $raw)) : '';
+
+        if (preg_match('/^\s*-/', (string) $value)) {
+            return 0;
+        }
+
         $value = preg_replace('/[^\d]/', '', (string) $value);
 
         if ($value === '') return 0;
