@@ -10,6 +10,7 @@ class LQM_CPT {
         add_action('add_meta_boxes', [__CLASS__, 'add_metaboxes']);
         add_action('save_post_' . self::CPT, [__CLASS__, 'save_meta'], 10, 2);
         add_filter('post_row_actions', [__CLASS__, 'row_actions'], 10, 2);
+        add_action('admin_enqueue_scripts', [__CLASS__, 'enqueue_admin_assets']);
     }
 
     public static function register_cpt() {
@@ -44,16 +45,6 @@ class LQM_CPT {
         if (!is_array($no_imp)) $no_imp = [];
 
         ?>
-        <style>
-            .lqm-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-            .lqm-grid .full{grid-column:1/-1}
-            .lqm-row{display:flex;gap:10px;margin:6px 0}
-            .lqm-row input{width:100%}
-            .lqm-small{font-size:12px;color:#666}
-            .lqm-table{width:100%;border-collapse:collapse;margin-top:8px}
-            .lqm-table th,.lqm-table td{border:1px solid #ddd;padding:8px}
-            .lqm-btn{margin-top:10px}
-        </style>
 
         <div class="lqm-grid">
             <div>
@@ -138,27 +129,6 @@ class LQM_CPT {
 
                 <button type="button" class="button lqm-btn" id="lqm-add-noimp">+ Agregar item</button>
 
-                <script>
-                (function(){
-                    const tbody = document.getElementById('lqm-noimp-table').querySelector('tbody');
-                    document.getElementById('lqm-add-noimp').addEventListener('click', function(){
-                        const tr = document.createElement('tr');
-                        tr.innerHTML = `
-                            <td><input type="text" name="lqm_noimp_nombre[]" value=""></td>
-                            <td><input type="number" name="lqm_noimp_monto[]" value=""></td>
-                            <td><button type="button" class="button lqm-del">X</button></td>
-                        `;
-                        tbody.appendChild(tr);
-                    });
-                    document.addEventListener('click', function(e){
-                        if (e.target && e.target.classList.contains('lqm-del')) {
-                            e.preventDefault();
-                            const tr = e.target.closest('tr');
-                            if (tr) tr.remove();
-                        }
-                    });
-                })();
-                </script>
             </div>
 
             <div class="full">
@@ -171,6 +141,17 @@ class LQM_CPT {
             </div>
         </div>
         <?php
+    }
+
+
+    public static function enqueue_admin_assets($hook) {
+        if ($hook !== 'post.php' && $hook !== 'post-new.php') return;
+
+        $screen = get_current_screen();
+        if (!$screen || $screen->post_type !== self::CPT) return;
+
+        wp_enqueue_style('lqm-admin', LQM_URL . 'assets/css/lqm-admin.css', [], LQM_VER);
+        wp_enqueue_script('lqm-admin', LQM_URL . 'assets/js/lqm-admin.js', [], LQM_VER, true);
     }
 
     public static function save_meta($post_id, $post) {

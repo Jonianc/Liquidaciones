@@ -1,0 +1,8 @@
+.lqm-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.lqm-grid .full{grid-column:1/-1}
+.lqm-row{display:flex;gap:10px;margin:6px 0}
+.lqm-row input{width:100%}
+.lqm-small{font-size:12px;color:#666}
+.lqm-table{width:100%;border-collapse:collapse;margin-top:8px}
+.lqm-table th,.lqm-table td{border:1px solid #ddd;padding:8px}
+.lqm-btn{margin-top:10px}

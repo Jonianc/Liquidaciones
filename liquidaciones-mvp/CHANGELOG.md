@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.3] - 2026-02-26
+### Changed
+- Se extrajeron los estilos y scripts inline del metabox de liquidaciones a archivos estáticos en `assets/`.
+- Se agregó carga condicional de assets en admin (`admin_enqueue_scripts`) solo para pantallas del CPT `lqm_liquidacion`.
+- Se mantuvo el comportamiento de la tabla de no imponibles (agregar/quitar filas) desde JavaScript externo.
+
 ## [0.1.2] - 2026-02-26
 ### Changed
 - Se robusteció el guardado de metadatos numéricos en la liquidación:
