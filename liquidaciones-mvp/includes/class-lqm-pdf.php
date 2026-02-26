@@ -4,25 +4,51 @@ if (!defined('ABSPATH')) exit;
 class LQM_PDF {
 
     public static function init() {
-        add_action('init', [__CLASS__, 'maybe_output_pdf']);
+        add_action('init', [__CLASS__, 'maybe_output_pdf']); // Compatibilidad legacy
+        add_action('admin_post_lqm_pdf', [__CLASS__, 'handle_admin_post_pdf']);
+    }
+
+    public static function handle_admin_post_pdf() {
+        $id = isset($_GET['lqm_pdf']) ? absint($_GET['lqm_pdf']) : 0;
+        $nonce = isset($_GET['_wpnonce']) ? sanitize_text_field(wp_unslash($_GET['_wpnonce'])) : '';
+
+        self::render_pdf($id, $nonce);
     }
 
     public static function maybe_output_pdf() {
         if (!isset($_GET['lqm_pdf'])) return;
 
-        $id = (int) $_GET['lqm_pdf'];
-        if (!$id) wp_die('ID inválido');
+        $id = absint($_GET['lqm_pdf']);
+        $nonce = isset($_GET['_wpnonce']) ? sanitize_text_field(wp_unslash($_GET['_wpnonce'])) : '';
+
+        self::render_pdf($id, $nonce);
+    }
+
+    private static function render_pdf($id, $nonce) {
+        if (!$id) {
+            self::deny_request('ID inválido para generar el PDF.', 400, 'lqm_pdf_invalid_id');
+        }
 
         $post = get_post($id);
-        if (!$post) wp_die('Liquidación no encontrada');
-        if ($post->post_type !== LQM_CPT::CPT) wp_die('Tipo de documento inválido');
+        if (!$post) {
+            self::deny_request('Liquidación no encontrada.', 404, 'lqm_pdf_not_found', $id);
+        }
 
-        if (!current_user_can('edit_post', $id)) wp_die('Sin permisos');
+        if ($post->post_type !== LQM_CPT::CPT) {
+            self::deny_request('Tipo de documento inválido.', 400, 'lqm_pdf_invalid_type', $id);
+        }
 
-        $nonce = isset($_GET['_wpnonce']) ? sanitize_text_field(wp_unslash($_GET['_wpnonce'])) : '';
-        if (!wp_verify_nonce($nonce, 'lqm_pdf_'.$id)) wp_die('Nonce inválido');
+        if (!current_user_can('edit_post', $id)) {
+            self::deny_request('No tienes permisos para ver esta liquidación.', 403, 'lqm_pdf_forbidden', $id);
+        }
 
-        if (!LQM_FPDF::ensure_loaded()) wp_die('FPDF no disponible');
+        if (!wp_verify_nonce($nonce, 'lqm_pdf_'.$id)) {
+            self::deny_request('El enlace para ver el PDF expiró o es inválido. Vuelve a abrir la liquidación y haz clic en “Ver PDF” nuevamente.', 403, 'lqm_pdf_nonce_invalid', $id);
+        }
+
+        if (!LQM_FPDF::ensure_loaded()) {
+            self::deny_request('No se pudo cargar FPDF para generar el documento.', 500, 'lqm_pdf_fpdf_missing', $id);
+        }
 
         $data = self::get_data($id);
         $calc = self::calculate($data);
@@ -110,6 +136,36 @@ class LQM_PDF {
 
         echo $pdf->Output('S');
         exit;
+    }
+
+    private static function deny_request($message, $status = 400, $error_code = 'lqm_pdf_error', $post_id = 0) {
+        self::log_event($error_code, $post_id);
+
+        $actions = [];
+        if ($post_id > 0 && current_user_can('edit_post', $post_id)) {
+            $actions[] = '<p><a class="button button-primary" href="' . esc_url(get_edit_post_link($post_id, '')) . '">Volver a la liquidación</a></p>';
+        }
+
+        $actions[] = '<p><a class="button" href="' . esc_url(admin_url('edit.php?post_type=' . LQM_CPT::CPT)) . '">Ir al listado de liquidaciones</a></p>';
+
+        wp_die(
+            '<p>' . esc_html($message) . '</p>' . implode('', $actions),
+            'No se pudo generar el PDF',
+            ['response' => (int) $status]
+        );
+    }
+
+    private static function log_event($event, $post_id = 0) {
+        if (!defined('WP_DEBUG') || !WP_DEBUG) return;
+
+        $user_id = get_current_user_id();
+        error_log(sprintf(
+            '[LQM_PDF] %s | post_id=%d | user_id=%d | uri=%s',
+            sanitize_key((string) $event),
+            (int) $post_id,
+            (int) $user_id,
+            isset($_SERVER['REQUEST_URI']) ? sanitize_text_field(wp_unslash($_SERVER['REQUEST_URI'])) : ''
+        ));
     }
 
     private static function get_data($id) {

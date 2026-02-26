@@ -289,11 +289,14 @@ class LQM_CPT {
 
     public static function pdf_url($post_id) {
         if (!$post_id) return '';
+
         $nonce = wp_create_nonce('lqm_pdf_'.$post_id);
+
         return add_query_arg([
+            'action' => 'lqm_pdf',
             'lqm_pdf' => $post_id,
-            '_wpnonce' => $nonce
-        ], home_url('/'));
+            '_wpnonce' => $nonce,
+        ], admin_url('admin-post.php'));
     }
 
     public static function row_actions($actions, $post) {

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.6] - 2026-02-26
+### Changed
+- Se endureció el flujo de generación de PDF usando `admin-post.php` con acción dedicada (`action=lqm_pdf`) para evitar depender del front (`home_url`) y mejorar el contexto de permisos en admin.
+- Se mejoró el manejo de errores del endpoint PDF con mensajes guiados para nonce expirado/inválido, accesos sin permisos y documentos inexistentes, incluyendo enlaces de retorno al listado/edición.
+- Se agregó logging técnico en modo `WP_DEBUG` para eventos de error del flujo PDF (sin exponer detalles al usuario final).
+- Se mantuvo compatibilidad retroactiva con enlaces legacy `?lqm_pdf=...` existentes.
+
 ## [0.1.5] - 2026-02-26
 ### Changed
 - Se implementó hardening de permisos del CPT `lqm_liquidacion` con capabilities propias + `map_meta_cap`, evitando depender de las capacidades genéricas de `post`.
