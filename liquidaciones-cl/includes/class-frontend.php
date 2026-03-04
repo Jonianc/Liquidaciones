@@ -403,7 +403,19 @@ final class CL_LIQ_Frontend {
                 $empleado_id = (int) ($data['cl_empleado_id'] ?? 0);
                 $periodo_id  = (int) ($data['cl_periodo_id'] ?? 0);
 
-                if ($empleado_id <= 0 || $periodo_id <= 0) {
+                $numeric_fields = [
+                    'cl_sueldo_base','cl_grat_manual','cl_he_horas','cl_he_valor_hora','cl_bonos_imponibles','cl_comisiones',
+                    'cl_otros_imponibles','cl_colacion','cl_movilizacion','cl_viaticos','cl_otros_no_imponibles',
+                    'cl_asig_manual_monto','cl_otros_descuentos','cl_anticipos','cl_prestamos'
+                ];
+                foreach ($numeric_fields as $nf) {
+                    if (CL_LIQ_Helpers::is_negative_number_input($data[$nf] ?? '')) {
+                        $error = 'No se permiten valores negativos en el formulario.';
+                        break;
+                    }
+                }
+
+                if (!$error && ($empleado_id <= 0 || $periodo_id <= 0)) {
                     $error = 'Debes seleccionar empleado y período.';
                 } else {
                     if (!$is_edit) {
@@ -838,6 +850,9 @@ final class CL_LIQ_Frontend {
 
                     if ($is_edit && !$error) {
                         $rut = sanitize_text_field(wp_unslash($_POST['cl_rut'] ?? ''));
+                        if ($rut !== '' && !CL_LIQ_Helpers::validate_rut($rut)) {
+                            $error = 'RUT inválido. Verifica formato y dígito verificador.';
+                        }
                         $tipo_contrato = sanitize_text_field(wp_unslash($_POST['cl_tipo_contrato'] ?? 'indefinido'));
                         $afp = sanitize_text_field(wp_unslash($_POST['cl_afp'] ?? 'Modelo'));
                         $salud_tipo = sanitize_text_field(wp_unslash($_POST['cl_salud_tipo'] ?? 'FONASA'));
@@ -1056,6 +1071,10 @@ final class CL_LIQ_Frontend {
                 $ym = sanitize_text_field(wp_unslash($_POST['cl_ym'] ?? CL_LIQ_Helpers::current_ym()));
                 if (!preg_match('/^\d{4}-\d{2}$/', $ym)) {
                     $error = 'Período inválido (usa YYYY-MM).';
+                } elseif (CL_LIQ_Helpers::period_exists($ym, $is_edit ? $per_id : 0)) {
+                    $error = 'Ya existe un período con ese YYYY-MM.';
+                } elseif (CL_LIQ_Helpers::is_negative_number_input($_POST['cl_uf_value'] ?? '')) {
+                    $error = 'UF inválida: no se permiten valores negativos.';
                 } else {
                     $uf = CL_LIQ_Helpers::parse_decimal($_POST['cl_uf_value'] ?? 0);
 

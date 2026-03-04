@@ -190,7 +190,9 @@ final class CL_LIQ_Meta_Boxes {
             if (!wp_verify_nonce($nonce, 'cl_liq_save_empleado')) return;
             if (!current_user_can('edit_post', $post_id)) return;
             $data = $_POST['cl_empleado'] ?? [];
-            update_post_meta($post_id, 'cl_rut', sanitize_text_field($data['cl_rut'] ?? ''));
+            $rut = sanitize_text_field($data['cl_rut'] ?? '');
+            if ($rut !== '' && !CL_LIQ_Helpers::validate_rut($rut)) return;
+            update_post_meta($post_id, 'cl_rut', $rut);
             update_post_meta($post_id, 'cl_tipo_contrato', sanitize_text_field($data['cl_tipo_contrato'] ?? 'indefinido'));
             update_post_meta($post_id, 'cl_afp', sanitize_text_field($data['cl_afp'] ?? 'Modelo'));
             update_post_meta($post_id, 'cl_salud_tipo', sanitize_text_field($data['cl_salud_tipo'] ?? 'FONASA'));
@@ -208,6 +210,8 @@ final class CL_LIQ_Meta_Boxes {
             $data = $_POST['cl_periodo'] ?? [];
             $ym = sanitize_text_field($data['cl_ym'] ?? CL_LIQ_Helpers::current_ym());
             if (!preg_match('/^\d{4}-\d{2}$/', $ym)) $ym = CL_LIQ_Helpers::current_ym();
+            if (CL_LIQ_Helpers::period_exists($ym, (int) $post_id)) return;
+            if (CL_LIQ_Helpers::is_negative_number_input($data['cl_uf_value'] ?? '')) return;
             update_post_meta($post_id, 'cl_ym', $ym);
             update_post_meta($post_id, 'cl_uf_value', CL_LIQ_Helpers::parse_decimal($data['cl_uf_value'] ?? 0));
             if (class_exists('CL_LIQ_Audit')) {
@@ -220,6 +224,15 @@ final class CL_LIQ_Meta_Boxes {
             if (!current_user_can('edit_post', $post_id)) return;
 
             $data = $_POST['cl_liq'] ?? [];
+
+            $numeric_fields = [
+                'cl_sueldo_base','cl_grat_manual','cl_he_horas','cl_he_valor_hora','cl_bonos_imponibles','cl_comisiones',
+                'cl_otros_imponibles','cl_colacion','cl_movilizacion','cl_viaticos','cl_otros_no_imponibles',
+                'cl_asig_manual_monto','cl_otros_descuentos','cl_anticipos','cl_prestamos'
+            ];
+            foreach ($numeric_fields as $nf) {
+                if (CL_LIQ_Helpers::is_negative_number_input($data[$nf] ?? '')) return;
+            }
 
             $empleado_id = (int) ($data['cl_empleado_id'] ?? 0);
             $periodo_id  = (int) ($data['cl_periodo_id'] ?? 0);

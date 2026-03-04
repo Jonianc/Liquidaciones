@@ -1,39 +1,49 @@
 # Changelog
 
-All notable changes to this plugin are documented in this file.
+Todos los cambios importantes de este plugin se documentan en este archivo.
 
-## [1.5.0] - 2026-03-04
-### Added
-- Operational audit module (`CL_LIQ_Audit`) with centralized event storage and retention (max. 200 entries).
-- Audit logging for create/update actions on empleados, períodos and liquidaciones from both admin and frontend flows.
-- Audit logging for updater execution and rollback events.
-- Audit viewer section in **Liquidaciones CL > Parámetros** with user, context and changes detail.
+## [1.6.0] - 2026-03-04
+### Agregado
+- Validación de RUT chileno (incluye dígito verificador) en formularios de empleados de frontend y guardado en admin.
+- Validación de período duplicado (`YYYY-MM`) para evitar crear/guardar más de un período con el mismo mes.
+- Validación de no-negativos en campos numéricos críticos de liquidaciones y UF.
+- Nuevas utilidades en `CL_LIQ_Helpers` para reglas de negocio (`validate_rut`, `period_exists`, `is_negative_number_input`).
+
+### Cambiado
+- Mensajes de error en frontend para entradas inválidas (RUT, UF negativa y período duplicado).
+
+## [1.5.0]
+### Agregado
+- Módulo de auditoría operativa (`CL_LIQ_Audit`) con almacenamiento centralizado de eventos y retención (máx. 200 entradas).
+- Registro de auditoría para creación/actualización de empleados, períodos y liquidaciones desde admin y frontend.
+- Registro de auditoría para ejecución y rollback del updater.
+- Sección de visualización de auditoría en **Liquidaciones CL > Parámetros** con usuario, contexto y detalle de cambios.
 
 ## [1.4.0]
-### Changed
-- Added granular custom capabilities for CPTs (`cl_empleado`, `cl_periodo`, `cl_liquidacion`).
-- Migrated admin access checks from `manage_options` to plugin capabilities.
-- Auto-assigned new capabilities to administrator role on activation/upgrade.
+### Cambiado
+- Capacidades personalizadas granulares para CPTs (`cl_empleado`, `cl_periodo`, `cl_liquidacion`).
+- Migración de controles de acceso admin desde `manage_options` a capacidades propias del plugin.
+- Asignación automática de nuevas capacidades al rol administrador en activación/upgrade.
 
 ## [1.3.1]
-### Fixed
-- Fixed admin-post handlers for "Actualizar ahora" and "Rollback".
+### Corregido
+- Corrección de handlers admin-post para "Actualizar ahora" y "Rollback".
 
 ## [1.3.0]
-### Added
-- Monthly auto-update via WP-Cron with automatic period window and UF fill.
-- Automatic period selector window for liquidación form.
-- Auto-update settings and actions (run now / rollback).
+### Agregado
+- Auto-update mensual por WP-Cron con ventana automática de períodos y relleno de UF.
+- Selector automático de períodos para formulario de liquidación.
+- Parámetros y acciones de auto-update (ejecutar ahora / rollback).
 
 ## [1.2.0]
-### Added
-- Frontend list/create/edit screens for empleados and períodos.
-- Quick employee selector and search/filters in lists.
+### Agregado
+- Pantallas frontend de listado/creación/edición para empleados y períodos.
+- Selector rápido de empleado y búsqueda/filtros en listados.
 
 ## [1.1.0]
-### Added
-- Frontend management routes and PDF endpoint.
+### Agregado
+- Gestión frontend por rutas y endpoint PDF.
 
 ## [1.0.0]
-### Added
-- Initial release (admin + calculations + PDF).
+### Agregado
+- Versión inicial (admin + cálculos + PDF).

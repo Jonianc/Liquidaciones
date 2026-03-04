@@ -83,6 +83,70 @@ final class CL_LIQ_Helpers {
         }
     }
 
+
+
+    public static function is_negative_number_input($value): bool {
+        if ($value === null) return false;
+        $s = trim((string) $value);
+        if ($s === '') return false;
+        return preg_match('/^\s*-/', $s) === 1;
+    }
+
+    public static function validate_rut(string $rut): bool {
+        $rut = strtoupper(trim($rut));
+        if ($rut === '') return true;
+
+        $rut = preg_replace('/[^0-9K]/', '', $rut);
+        if (!preg_match('/^[0-9]{7,8}[0-9K]$/', $rut)) return false;
+
+        $body = substr($rut, 0, -1);
+        $dv = substr($rut, -1);
+
+        $sum = 0;
+        $mul = 2;
+        for ($i = strlen($body) - 1; $i >= 0; $i--) {
+            $sum += ((int) $body[$i]) * $mul;
+            $mul = ($mul === 7) ? 2 : $mul + 1;
+        }
+
+        $mod = 11 - ($sum % 11);
+        if ($mod === 11) {
+            $expected = '0';
+        } elseif ($mod === 10) {
+            $expected = 'K';
+        } else {
+            $expected = (string) $mod;
+        }
+
+        return $dv === $expected;
+    }
+
+    public static function period_exists(string $ym, int $exclude_id = 0): bool {
+        $ym = trim($ym);
+        if (!preg_match('/^\d{4}-\d{2}$/', $ym)) return false;
+
+        $ids = get_posts([
+            'post_type' => 'cl_periodo',
+            'post_status' => 'any',
+            'numberposts' => 10,
+            'fields' => 'ids',
+            'meta_query' => [
+                [
+                    'key' => 'cl_ym',
+                    'value' => $ym,
+                    'compare' => '=',
+                ]
+            ],
+        ]);
+
+        if (!$ids) return false;
+        foreach ($ids as $id) {
+            $id = (int) $id;
+            if ($id > 0 && $id !== $exclude_id) return true;
+        }
+        return false;
+    }
+
     public static function ym_label(string $ym): string {
         // ym = YYYY-MM
         $parts = explode('-', $ym);
