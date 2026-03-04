@@ -1,0 +1,97 @@
+<?php
+if ( ! defined('ABSPATH') ) { exit; }
+
+final class CL_LIQ_Helpers {
+
+    /** Parse CLP values like "1.234.567" or "$ 1 234 567" to int pesos */
+    public static function parse_clp($value): int {
+        if ($value === null) return 0;
+        if (is_int($value)) return $value;
+        if (is_float($value)) return (int) round($value);
+        $s = (string) $value;
+        $s = str_replace(["$", "CLP", "clp", " "], "", $s);
+        // keep digits only
+        $s = preg_replace('/[^0-9]/', '', $s);
+        if ($s === '' ) return 0;
+        return (int) $s;
+    }
+
+    /** Parse decimal like "1,23" or "1.23" to float */
+    public static function parse_decimal($value): float {
+        if ($value === null) return 0.0;
+        if (is_float($value)) return $value;
+        if (is_int($value)) return (float) $value;
+        $s = trim((string)$value);
+        $s = str_replace([' ', 'UF', 'uf'], '', $s);
+        // If both separators exist, treat last as decimal
+        if (strpos($s, ',') !== false && strpos($s, '.') !== false) {
+            // remove thousand separators: assume '.' thousands and ',' decimals
+            $s = str_replace('.', '', $s);
+            $s = str_replace(',', '.', $s);
+        } else {
+            $s = str_replace(',', '.', $s);
+        }
+        $s = preg_replace('/[^0-9\.-]/', '', $s);
+        if ($s === '' || $s === '-' || $s === '.' ) return 0.0;
+        return (float) $s;
+    }
+
+    public static function money($clp): string {
+        $n = (int) round((float)$clp);
+        return '$ ' . number_format($n, 0, ',', '.');
+    }
+
+    public static function esc_money($clp): string {
+        return esc_html(self::money($clp));
+    }
+
+    public static function current_ym(): string {
+        // Use WP timezone
+        return (string) current_time('Y-m');
+    }
+
+    /** Add months to a YYYY-MM string (can be negative). */
+    public static function ym_add(string $ym, int $months): string {
+        $ym = trim($ym);
+        if (!preg_match('/^\d{4}-\d{2}$/', $ym)) {
+            $ym = self::current_ym();
+        }
+
+        try {
+            $tz = function_exists('wp_timezone') ? wp_timezone() : new DateTimeZone('UTC');
+            $dt = new DateTime($ym . '-01 00:00:00', $tz);
+            $dt->modify(($months >= 0 ? '+' : '') . $months . ' months');
+            return $dt->format('Y-m');
+        } catch (Exception $e) {
+            return $ym;
+        }
+    }
+
+    /** Returns last calendar day of a YYYY-MM period as Y-m-d. */
+    public static function ym_last_day(string $ym): string {
+        $ym = trim($ym);
+        if (!preg_match('/^\d{4}-\d{2}$/', $ym)) {
+            $ym = self::current_ym();
+        }
+        try {
+            $tz = function_exists('wp_timezone') ? wp_timezone() : new DateTimeZone('UTC');
+            $dt = new DateTime($ym . '-01 00:00:00', $tz);
+            $dt->modify('last day of this month');
+            return $dt->format('Y-m-d');
+        } catch (Exception $e) {
+            return $ym . '-28';
+        }
+    }
+
+    public static function ym_label(string $ym): string {
+        // ym = YYYY-MM
+        $parts = explode('-', $ym);
+        if (count($parts) !== 2) return $ym;
+        $y = $parts[0];
+        $m = (int)$parts[1];
+        $months = [1=>'Enero',2=>'Febrero',3=>'Marzo',4=>'Abril',5=>'Mayo',6=>'Junio',7=>'Julio',8=>'Agosto',9=>'Septiembre',10=>'Octubre',11=>'Noviembre',12=>'Diciembre'];
+        $mn = $months[$m] ?? $m;
+        return $mn . ' ' . $y;
+    }
+
+}
