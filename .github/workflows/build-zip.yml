@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - "**"
-    paths:
-      - "liquidaciones-cl/**"
   workflow_dispatch:
 
 jobs:
