@@ -1,0 +1,52 @@
+name: Build ZIP (liquidaciones-cl)
+
+on:
+  push:
+    branches:
+      - "**"
+    paths:
+      - "liquidaciones-cl/**"
+  workflow_dispatch:
+
+jobs:
+  zip:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install zip
+        run: sudo apt-get update && sudo apt-get install -y zip
+
+      - name: Build ZIP from folder
+        shell: bash
+        run: |
+          set -e
+          FOLDER="liquidaciones-cl"
+
+          if [ ! -d "$FOLDER" ]; then
+            echo "ERROR: No existe la carpeta '$FOLDER' en el repo."
+            exit 1
+          fi
+
+          ZIP_NAME="${FOLDER}-${{ github.ref_name }}-${GITHUB_SHA:0:7}.zip"
+
+          zip -r "$ZIP_NAME" "$FOLDER" \
+            -x "$FOLDER/.git/*" \
+               "$FOLDER/node_modules/*" \
+               "$FOLDER/vendor/*" \
+               "$FOLDER/**/.env" \
+               "$FOLDER/**/.env.*" \
+               "$FOLDER/**/.DS_Store" \
+               "$FOLDER/**/Thumbs.db" \
+               "$FOLDER/**/*.log"
+
+          echo "ZIP_NAME=$ZIP_NAME" >> "$GITHUB_ENV"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: liquidaciones-cl-${{ github.ref_name }}
+          path: ${{ env.ZIP_NAME }}
+          retention-days: 30
