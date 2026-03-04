@@ -849,10 +849,12 @@ final class CL_LIQ_Frontend {
                     }
 
                     if ($is_edit && !$error) {
-                        $rut = sanitize_text_field(wp_unslash($_POST['cl_rut'] ?? ''));
-                        if ($rut !== '' && !CL_LIQ_Helpers::validate_rut($rut)) {
+                        $rut_raw = sanitize_text_field(wp_unslash($_POST['cl_rut'] ?? ''));
+                        if ($rut_raw !== '' && !CL_LIQ_Helpers::validate_rut($rut_raw)) {
                             $error = 'RUT inválido. Verifica formato y dígito verificador.';
                         }
+                        $rut = CL_LIQ_Helpers::format_rut($rut_raw);
+
                         $tipo_contrato = sanitize_text_field(wp_unslash($_POST['cl_tipo_contrato'] ?? 'indefinido'));
                         $afp = sanitize_text_field(wp_unslash($_POST['cl_afp'] ?? 'Modelo'));
                         $salud_tipo = sanitize_text_field(wp_unslash($_POST['cl_salud_tipo'] ?? 'FONASA'));
@@ -860,22 +862,24 @@ final class CL_LIQ_Frontend {
                         $cargas = max(0, (int) ($_POST['cl_cargas'] ?? 0));
                         $tramo = sanitize_text_field(wp_unslash($_POST['cl_tramo_asig'] ?? 'auto'));
 
-                        update_post_meta($emp_id, 'cl_rut', $rut);
-                        update_post_meta($emp_id, 'cl_tipo_contrato', $tipo_contrato);
-                        update_post_meta($emp_id, 'cl_afp', $afp);
-                        update_post_meta($emp_id, 'cl_salud_tipo', $salud_tipo);
-                        update_post_meta($emp_id, 'cl_isapre_plan_clp', $isapre_plan);
-                        update_post_meta($emp_id, 'cl_cargas', $cargas);
-                        update_post_meta($emp_id, 'cl_tramo_asig', $tramo);
+                        if (!$error) {
+                            update_post_meta($emp_id, 'cl_rut', $rut);
+                            update_post_meta($emp_id, 'cl_tipo_contrato', $tipo_contrato);
+                            update_post_meta($emp_id, 'cl_afp', $afp);
+                            update_post_meta($emp_id, 'cl_salud_tipo', $salud_tipo);
+                            update_post_meta($emp_id, 'cl_isapre_plan_clp', $isapre_plan);
+                            update_post_meta($emp_id, 'cl_cargas', $cargas);
+                            update_post_meta($emp_id, 'cl_tramo_asig', $tramo);
 
-                        if (class_exists('CL_LIQ_Audit')) {
-                            CL_LIQ_Audit::log_post_change($emp_id, 'cl_empleado', 'frontend_save');
+                            if (class_exists('CL_LIQ_Audit')) {
+                                CL_LIQ_Audit::log_post_change($emp_id, 'cl_empleado', 'frontend_save');
+                            }
+
+                            $redir = $return;
+                            $sep = (strpos($redir, '?') === false) ? '?' : '&';
+                            wp_redirect($redir . $sep . 'msg=saved');
+                            exit;
                         }
-
-                        $redir = $return;
-                        $sep = (strpos($redir, '?') === false) ? '?' : '&';
-                        wp_redirect($redir . $sep . 'msg=saved');
-                        exit;
                     }
                 }
             }
@@ -914,7 +918,7 @@ final class CL_LIQ_Frontend {
 
         echo '<div class="grid">';
         echo '<div><label>Nombre</label><input name="cl_emp_name" type="text" value="' . esc_attr($name) . '" required></div>';
-        echo '<div><label>RUT</label><input name="cl_rut" type="text" value="' . esc_attr($rut) . '" placeholder="12.345.678-9"></div>';
+        echo '<div><label>RUT</label><input id="clRutInput" name="cl_rut" type="text" value="' . esc_attr($rut) . '" placeholder="12.345.678-9"></div>';
         echo '</div>';
 
         echo '<div class="grid3" style="margin-top:12px">';
@@ -958,6 +962,8 @@ final class CL_LIQ_Frontend {
         echo '<button class="btn" type="submit">Guardar</button>';
         echo '<a class="btn ghost" href="' . esc_url($return) . '">Cancelar</a>';
         echo '</div>';
+
+        echo '<script>(function(){var i=document.getElementById("clRutInput");if(!i)return;function f(v){v=(v||"").toUpperCase().replace(/[^0-9K]/g,"");if(v.length<2)return v;var b=v.slice(0,-1),d=v.slice(-1);var out="",c=0;for(var x=b.length-1;x>=0;x--){out=b.charAt(x)+out;c++;if(c%3===0&&x!==0)out="."+out;}return out+"-"+d;}i.addEventListener("blur",function(){i.value=f(i.value);});})();</script>';
 
         echo '</form>';
         echo '</div>';

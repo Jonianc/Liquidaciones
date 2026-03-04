@@ -2,6 +2,13 @@
 
 Todos los cambios importantes de este plugin se documentan en este archivo.
 
+## [1.6.1] - 2026-03-04
+### Corregido
+- RUT: validación robusta con normalización previa (admite entrada con/sin puntos y guión) en admin y frontend.
+- RUT: formateo automático persistido al guardar en formato `12.345.678-K`.
+- RUT frontend/admin: autoformateo al salir del campo para mejorar UX.
+- Empleados frontend: se corrige flujo para no guardar datos si el RUT es inválido.
+
 ## [1.6.0] - 2026-03-04
 ### Agregado
 - Validación de RUT chileno (incluye dígito verificador) en formularios de empleados de frontend y guardado en admin.

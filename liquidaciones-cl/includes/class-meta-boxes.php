@@ -38,7 +38,7 @@ final class CL_LIQ_Meta_Boxes {
         $afps = array_keys($settings['afp_commissions']);
 
         echo '<table class="form-table" role="presentation"><tbody>';
-        echo '<tr><th scope="row">RUT</th><td>' . self::field('cl_empleado[cl_rut]', $rut, 'text', 'class="regular-text" placeholder="12.345.678-9"') . '</td></tr>';
+        echo '<tr><th scope="row">RUT</th><td>' . self::field('cl_empleado[cl_rut]', $rut, 'text', 'id="cl-rut-input" class="regular-text" placeholder="12.345.678-9"') . '</td></tr>';
         echo '<tr><th scope="row">Tipo de contrato</th><td><select name="cl_empleado[cl_tipo_contrato]">';
         $opts = [
             'indefinido' => 'Indefinido',
@@ -75,6 +75,7 @@ final class CL_LIQ_Meta_Boxes {
         echo '</select></td></tr>';
 
         echo '</tbody></table>';
+        echo '<script>(function(){var i=document.getElementById("cl-rut-input");if(!i)return;function f(v){v=(v||"").toUpperCase().replace(/[^0-9K]/g,"");if(v.length<2)return v;var b=v.slice(0,-1),d=v.slice(-1);var out="",c=0;for(var x=b.length-1;x>=0;x--){out=b.charAt(x)+out;c++;if(c%3===0&&x!==0)out="."+out;}return out+"-"+d;}i.addEventListener("blur",function(){i.value=f(i.value);});})();</script>';
     }
 
     public static function render_periodo($post) {
@@ -190,8 +191,9 @@ final class CL_LIQ_Meta_Boxes {
             if (!wp_verify_nonce($nonce, 'cl_liq_save_empleado')) return;
             if (!current_user_can('edit_post', $post_id)) return;
             $data = $_POST['cl_empleado'] ?? [];
-            $rut = sanitize_text_field($data['cl_rut'] ?? '');
-            if ($rut !== '' && !CL_LIQ_Helpers::validate_rut($rut)) return;
+            $rut_raw = sanitize_text_field($data['cl_rut'] ?? '');
+            if ($rut_raw !== '' && !CL_LIQ_Helpers::validate_rut($rut_raw)) return;
+            $rut = CL_LIQ_Helpers::format_rut($rut_raw);
             update_post_meta($post_id, 'cl_rut', $rut);
             update_post_meta($post_id, 'cl_tipo_contrato', sanitize_text_field($data['cl_tipo_contrato'] ?? 'indefinido'));
             update_post_meta($post_id, 'cl_afp', sanitize_text_field($data['cl_afp'] ?? 'Modelo'));

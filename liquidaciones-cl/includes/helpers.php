@@ -92,11 +92,32 @@ final class CL_LIQ_Helpers {
         return preg_match('/^\s*-/', $s) === 1;
     }
 
-    public static function validate_rut(string $rut): bool {
+    public static function normalize_rut(string $rut): string {
         $rut = strtoupper(trim($rut));
+        $rut = preg_replace('/[^0-9K]/', '', $rut);
+        return (string) $rut;
+    }
+
+    public static function format_rut(string $rut): string {
+        $rut = self::normalize_rut($rut);
+        if (!preg_match('/^[0-9]{7,8}[0-9K]$/', $rut)) {
+            return $rut;
+        }
+
+        $body = substr($rut, 0, -1);
+        $dv = substr($rut, -1);
+
+        $rev = strrev($body);
+        $parts = str_split($rev, 3);
+        $body_fmt = strrev(implode('.', $parts));
+
+        return $body_fmt . '-' . $dv;
+    }
+
+    public static function validate_rut(string $rut): bool {
+        $rut = self::normalize_rut($rut);
         if ($rut === '') return true;
 
-        $rut = preg_replace('/[^0-9K]/', '', $rut);
         if (!preg_match('/^[0-9]{7,8}[0-9K]$/', $rut)) return false;
 
         $body = substr($rut, 0, -1);
