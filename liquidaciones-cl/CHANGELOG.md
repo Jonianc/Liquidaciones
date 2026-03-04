@@ -2,6 +2,11 @@
 
 Todos los cambios importantes de este plugin se documentan en este archivo.
 
+## [1.6.2] - 2026-03-04
+### Agregado
+- Sección **Rutas de acceso rápido** en Ajustes (Parámetros) con enlaces directos al frontend y admin del plugin.
+- Accesos directos a: listado/nueva liquidación, empleados/listado+nuevo y períodos/listado+nuevo.
+
 ## [1.6.1] - 2026-03-04
 ### Corregido
 - RUT: validación robusta con normalización previa (admite entrada con/sin puntos y guión) en admin y frontend.

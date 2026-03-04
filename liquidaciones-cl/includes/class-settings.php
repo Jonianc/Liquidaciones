@@ -10,6 +10,13 @@ final class CL_LIQ_Settings {
         return current_user_can('manage_cl_liquidaciones') || current_user_can('manage_options');
     }
 
+    private static function frontend_base_url(): string {
+        $slug = apply_filters('cl_liq_front_slug', class_exists('CL_LIQ_Frontend') ? CL_LIQ_Frontend::SLUG_DEFAULT : 'liquidaciones-cl');
+        $slug = sanitize_title_with_dashes((string) $slug);
+        if (!$slug) $slug = 'liquidaciones-cl';
+        return trailingslashit(home_url('/' . $slug . '/'));
+    }
+
     public static function init() {
         add_action('admin_menu', [__CLASS__, 'admin_menu']);
         add_action('init', [__CLASS__, 'maybe_upgrade'], 9);
@@ -272,6 +279,23 @@ final class CL_LIQ_Settings {
 
         echo '<div class="wrap">';
         echo '<h1>Parámetros</h1>';
+
+        $fe_base = self::frontend_base_url();
+        echo '<div style="margin:12px 0 18px;padding:12px;border:1px solid #e5e7eb;background:#fff;border-radius:8px">';
+        echo '<h2 style="margin-top:0">Rutas de acceso rápido</h2>';
+        echo '<p class="description">Accesos directos al frontend del plugin y a pantallas admin.</p>';
+        echo '<ul style="margin:8px 0 0 18px;line-height:1.8">';
+        echo '<li><a target="_blank" href="' . esc_url($fe_base) . '">Frontend: Listado de liquidaciones</a></li>';
+        echo '<li><a target="_blank" href="' . esc_url($fe_base . 'nueva/') . '">Frontend: Nueva liquidación</a></li>';
+        echo '<li><a target="_blank" href="' . esc_url($fe_base . 'empleados/') . '">Frontend: Empleados</a></li>';
+        echo '<li><a target="_blank" href="' . esc_url($fe_base . 'empleados/nuevo/') . '">Frontend: Nuevo empleado</a></li>';
+        echo '<li><a target="_blank" href="' . esc_url($fe_base . 'periodos/') . '">Frontend: Períodos</a></li>';
+        echo '<li><a target="_blank" href="' . esc_url($fe_base . 'periodos/nuevo/') . '">Frontend: Nuevo período</a></li>';
+        echo '<li><a href="' . esc_url(admin_url('edit.php?post_type=cl_empleado')) . '">Admin: Empleados</a></li>';
+        echo '<li><a href="' . esc_url(admin_url('edit.php?post_type=cl_periodo')) . '">Admin: Períodos</a></li>';
+        echo '<li><a href="' . esc_url(admin_url('edit.php?post_type=cl_liquidacion')) . '">Admin: Liquidaciones</a></li>';
+        echo '</ul>';
+        echo '</div>';
         // Notices from updater actions
         $auto_msg = sanitize_text_field(wp_unslash($_GET['auto_msg'] ?? ''));
         if ($auto_msg) {
