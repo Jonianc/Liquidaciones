@@ -6,6 +6,10 @@ final class CL_LIQ_Settings {
     const OPTION_KEY = 'cl_liq_settings';
     const VERSION_OPTION = 'cl_liq_plugin_version';
 
+    private static function can_manage(): bool {
+        return current_user_can('manage_cl_liquidaciones') || current_user_can('manage_options');
+    }
+
     public static function init() {
         add_action('admin_menu', [__CLASS__, 'admin_menu']);
         add_action('init', [__CLASS__, 'maybe_upgrade'], 9);
@@ -112,22 +116,22 @@ final class CL_LIQ_Settings {
         add_menu_page(
             __('Liquidaciones CL', 'liquidaciones-cl'),
             __('Liquidaciones CL', 'liquidaciones-cl'),
-            'manage_options',
+            'manage_cl_liquidaciones',
             'cl-liquidaciones',
             [__CLASS__, 'render_home'],
             'dashicons-media-spreadsheet',
             26
         );
 
-        add_submenu_page('cl-liquidaciones', __('Empleados', 'liquidaciones-cl'), __('Empleados', 'liquidaciones-cl'), 'manage_options', 'edit.php?post_type=cl_empleado');
-        add_submenu_page('cl-liquidaciones', __('Períodos', 'liquidaciones-cl'), __('Períodos', 'liquidaciones-cl'), 'manage_options', 'edit.php?post_type=cl_periodo');
-        add_submenu_page('cl-liquidaciones', __('Liquidaciones', 'liquidaciones-cl'), __('Liquidaciones', 'liquidaciones-cl'), 'manage_options', 'edit.php?post_type=cl_liquidacion');
-        add_submenu_page('cl-liquidaciones', __('Parámetros', 'liquidaciones-cl'), __('Parámetros', 'liquidaciones-cl'), 'manage_options', 'cl-liquidaciones-settings', [__CLASS__, 'render_settings']);
-        add_submenu_page('cl-liquidaciones', __('Ayuda', 'liquidaciones-cl'), __('Ayuda', 'liquidaciones-cl'), 'manage_options', 'cl-liquidaciones-help', [__CLASS__, 'render_help']);
+        add_submenu_page('cl-liquidaciones', __('Empleados', 'liquidaciones-cl'), __('Empleados', 'liquidaciones-cl'), 'edit_cl_empleados', 'edit.php?post_type=cl_empleado');
+        add_submenu_page('cl-liquidaciones', __('Períodos', 'liquidaciones-cl'), __('Períodos', 'liquidaciones-cl'), 'edit_cl_periodos', 'edit.php?post_type=cl_periodo');
+        add_submenu_page('cl-liquidaciones', __('Liquidaciones', 'liquidaciones-cl'), __('Liquidaciones', 'liquidaciones-cl'), 'edit_cl_liquidaciones', 'edit.php?post_type=cl_liquidacion');
+        add_submenu_page('cl-liquidaciones', __('Parámetros', 'liquidaciones-cl'), __('Parámetros', 'liquidaciones-cl'), 'manage_cl_liquidaciones', 'cl-liquidaciones-settings', [__CLASS__, 'render_settings']);
+        add_submenu_page('cl-liquidaciones', __('Ayuda', 'liquidaciones-cl'), __('Ayuda', 'liquidaciones-cl'), 'manage_cl_liquidaciones', 'cl-liquidaciones-help', [__CLASS__, 'render_help']);
     }
 
     public static function render_home() {
-        if ( ! current_user_can('manage_options') ) return;
+        if ( ! self::can_manage() ) return;
         echo '<div class="wrap">';
         echo '<h1>Liquidaciones CL</h1>';
         echo '<p>Flujo rápido:</p>';
@@ -141,7 +145,7 @@ final class CL_LIQ_Settings {
     }
 
     public static function render_help() {
-        if ( ! current_user_can('manage_options') ) return;
+        if ( ! self::can_manage() ) return;
         echo '<div class="wrap">';
         echo '<h1>Ayuda</h1>';
         echo '<p><strong>Notas:</strong></p>';
@@ -251,7 +255,7 @@ final class CL_LIQ_Settings {
     }
 
     public static function render_settings() {
-        if ( ! current_user_can('manage_options') ) return;
+        if ( ! self::can_manage() ) return;
 
         $settings = self::get();
 
@@ -411,7 +415,7 @@ final class CL_LIQ_Settings {
 
 
     public static function handle_run_update() {
-        if ( ! current_user_can('manage_options') ) {
+        if ( ! self::can_manage() ) {
             wp_die('No autorizado.');
         }
         check_admin_referer('cl_liq_run_update');
@@ -438,7 +442,7 @@ final class CL_LIQ_Settings {
     }
 
     public static function handle_rollback() {
-        if ( ! current_user_can('manage_options') ) {
+        if ( ! self::can_manage() ) {
             wp_die('No autorizado.');
         }
         check_admin_referer('cl_liq_rollback');

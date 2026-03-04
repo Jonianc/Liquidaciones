@@ -4,7 +4,7 @@ Tags: liquidaciones, sueldo, chile, afp, fonasa, isapre, impuesto unico
 Requires at least: 6.0
 Tested up to: 6.5
 Requires PHP: 7.4
-Stable tag: 1.3.1
+Stable tag: 1.4.0
 License: GPLv2 or later
 
 Genera liquidaciones de sueldo (Chile) en WordPress: empleados, períodos y liquidaciones con cálculos automáticos y PDF. Incluye una pantalla de gestión en frontend por URL (sin depender del theme).
@@ -31,6 +31,11 @@ Rutas (requiere login + capacidad manage_cl_liquidaciones):
 Nota: si instalaste/actualizaste y devuelve 404, entra a Ajustes > Enlaces permanentes y guarda (o reactiva el plugin) para refrescar rewrite rules.
 
 == Changelog ==
+= 1.4.0 =
+* Seguridad/roles: capabilities personalizadas por CPT (empleados, períodos y liquidaciones).
+* Seguridad: menúes y handlers principales migrados a capacidades del plugin (manage_cl_liquidaciones + caps por entidad), evitando dependencia directa de manage_options.
+* Migración: en activación/upgrade se asignan automáticamente las nuevas capabilities al rol administrador.
+
 = 1.3.1 =
 * Fix: handlers admin-post para "Actualizar ahora" y "Rollback" (evita fatal error).
 
@@ -65,4 +70,3 @@ En Liquidaciones CL > Parámetros puedes ajustar:
 
 == Importante ==
 Revisa siempre el resultado antes de emitir una liquidación a un trabajador. La normativa y valores cambian con el tiempo; por eso el plugin incluye parámetros editables.
-

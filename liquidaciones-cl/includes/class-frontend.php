@@ -20,8 +20,17 @@ final class CL_LIQ_Frontend {
 
     private static function add_caps() {
         $role = get_role('administrator');
-        if ($role && !$role->has_cap('manage_cl_liquidaciones')) {
-            $role->add_cap('manage_cl_liquidaciones');
+        if (!$role) return;
+
+        $caps = ['manage_cl_liquidaciones'];
+        if (class_exists('CL_LIQ_CPT')) {
+            $caps = array_merge($caps, CL_LIQ_CPT::all_caps());
+        }
+
+        foreach (array_unique($caps) as $cap) {
+            if (!$role->has_cap($cap)) {
+                $role->add_cap($cap);
+            }
         }
     }
 

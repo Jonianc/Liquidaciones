@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Liquidaciones CL
  * Description: Genera liquidaciones de sueldo (Chile) con cálculos automáticos y PDF. Incluye empleados, períodos y liquidaciones.
- * Version: 1.3.1
+ * Version: 1.4.0
  * Author: Rocket Solutions
  * Requires at least: 6.0
  * Requires PHP: 7.4
@@ -12,7 +12,7 @@
 
 if ( ! defined('ABSPATH') ) { exit; }
 
-define('CL_LIQ_VERSION', '1.3.1');
+define('CL_LIQ_VERSION', '1.4.0');
 define('CL_LIQ_PATH', plugin_dir_path(__FILE__));
 define('CL_LIQ_URL', plugin_dir_url(__FILE__));
 
@@ -39,4 +39,3 @@ add_action('plugins_loaded', function() {
     CL_LIQ_Updater::init();
     CL_LIQ_Frontend::init();
 });
-
