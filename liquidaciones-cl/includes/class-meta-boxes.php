@@ -197,6 +197,9 @@ final class CL_LIQ_Meta_Boxes {
             update_post_meta($post_id, 'cl_isapre_plan_clp', CL_LIQ_Helpers::parse_clp($data['cl_isapre_plan_clp'] ?? 0));
             update_post_meta($post_id, 'cl_cargas', max(0, (int) ($data['cl_cargas'] ?? 0)));
             update_post_meta($post_id, 'cl_tramo_asig', sanitize_text_field($data['cl_tramo_asig'] ?? 'auto'));
+            if (class_exists('CL_LIQ_Audit')) {
+                CL_LIQ_Audit::log_post_change($post_id, 'cl_empleado', 'admin_save');
+            }
         }
 
         if ($pt === 'cl_periodo') {
@@ -207,6 +210,9 @@ final class CL_LIQ_Meta_Boxes {
             if (!preg_match('/^\d{4}-\d{2}$/', $ym)) $ym = CL_LIQ_Helpers::current_ym();
             update_post_meta($post_id, 'cl_ym', $ym);
             update_post_meta($post_id, 'cl_uf_value', CL_LIQ_Helpers::parse_decimal($data['cl_uf_value'] ?? 0));
+            if (class_exists('CL_LIQ_Audit')) {
+                CL_LIQ_Audit::log_post_change($post_id, 'cl_periodo', 'admin_save');
+            }
         }
 
         if ($pt === 'cl_liquidacion') {
@@ -256,6 +262,10 @@ final class CL_LIQ_Meta_Boxes {
             // calculate + store
             $calc = CL_LIQ_Calculator::calculate_liquidacion($post_id);
             update_post_meta($post_id, 'cl_calc', $calc);
+
+            if (class_exists('CL_LIQ_Audit')) {
+                CL_LIQ_Audit::log_post_change($post_id, 'cl_liquidacion', 'admin_save');
+            }
 
             // auto-title if empty
             $title = get_the_title($post_id);

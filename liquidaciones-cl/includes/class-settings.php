@@ -331,6 +331,38 @@ final class CL_LIQ_Settings {
 
         echo '</div>';
 
+        $audit_log = class_exists('CL_LIQ_Audit') ? CL_LIQ_Audit::get_log(20) : [];
+        echo '<div style="margin:12px 0 18px;padding:12px;border:1px solid #e5e7eb;background:#fff;border-radius:8px">';
+        echo '<h2 style="margin-top:0">Auditoría operativa</h2>';
+        echo '<p class="description">Registra quién creó/actualizó entidades y acciones del updater. Se guardan hasta 200 eventos.</p>';
+        if (!empty($audit_log)) {
+            echo '<table class="widefat striped"><thead><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Entidad</th><th>ID</th><th>Contexto</th><th>Cambios</th></tr></thead><tbody>';
+            foreach ($audit_log as $row) {
+                $ts = (int) ($row['ts'] ?? 0);
+                $uid = (int) ($row['user'] ?? 0);
+                $user = $uid > 0 ? get_userdata($uid) : null;
+                $uname = $user ? $user->user_login : 'sistema';
+                $action = (string) ($row['action'] ?? '');
+                $entity = (string) ($row['entity_type'] ?? '');
+                $eid = (int) ($row['entity_id'] ?? 0);
+                $ctx = (string) ($row['context'] ?? '');
+                $changes = $row['changes'] ?? [];
+                echo '<tr>';
+                echo '<td>' . esc_html($ts ? wp_date('Y-m-d H:i', $ts) : '—') . '</td>';
+                echo '<td>' . esc_html($uname) . '</td>';
+                echo '<td>' . esc_html($action) . '</td>';
+                echo '<td>' . esc_html($entity) . '</td>';
+                echo '<td>' . esc_html($eid ? (string) $eid : '—') . '</td>';
+                echo '<td>' . esc_html($ctx ?: '—') . '</td>';
+                echo '<td><code>' . esc_html(wp_json_encode($changes)) . '</code></td>';
+                echo '</tr>';
+            }
+            echo '</tbody></table>';
+        } else {
+            echo '<p>No hay eventos de auditoría todavía.</p>';
+        }
+        echo '</div>';
+
         echo '<form method="post">';
         wp_nonce_field('cl_liq_save_settings');
 

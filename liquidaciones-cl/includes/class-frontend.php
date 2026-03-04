@@ -473,6 +473,10 @@ final class CL_LIQ_Frontend {
                             wp_update_post(['ID' => $liq_id, 'post_title' => $title]);
                         }
 
+                        if (class_exists('CL_LIQ_Audit')) {
+                            CL_LIQ_Audit::log_post_change($liq_id, 'cl_liquidacion', 'frontend_save');
+                        }
+
                         wp_redirect($base . 'editar/' . $liq_id . '/?msg=saved');
                         exit;
                     }
@@ -849,6 +853,10 @@ final class CL_LIQ_Frontend {
                         update_post_meta($emp_id, 'cl_cargas', $cargas);
                         update_post_meta($emp_id, 'cl_tramo_asig', $tramo);
 
+                        if (class_exists('CL_LIQ_Audit')) {
+                            CL_LIQ_Audit::log_post_change($emp_id, 'cl_empleado', 'frontend_save');
+                        }
+
                         $redir = $return;
                         $sep = (strpos($redir, '?') === false) ? '?' : '&';
                         wp_redirect($redir . $sep . 'msg=saved');
@@ -1070,6 +1078,10 @@ final class CL_LIQ_Frontend {
                     if ($is_edit && !$error) {
                         update_post_meta($per_id, 'cl_ym', $ym);
                         update_post_meta($per_id, 'cl_uf_value', $uf);
+
+                        if (class_exists('CL_LIQ_Audit')) {
+                            CL_LIQ_Audit::log_post_change($per_id, 'cl_periodo', 'frontend_save');
+                        }
 
                         $redir = $return;
                         $sep = (strpos($redir, '?') === false) ? '?' : '&';

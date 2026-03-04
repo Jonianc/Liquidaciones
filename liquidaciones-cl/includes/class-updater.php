@@ -113,6 +113,9 @@ final class CL_LIQ_Updater {
         update_option(self::OPT_LAST_RUN_TS, time(), false);
 
         self::log('run', 'Actualización mensual ejecutada', $changes);
+        if (class_exists('CL_LIQ_Audit')) {
+            CL_LIQ_Audit::log_event('updater_run', 'Actualización mensual ejecutada', $changes, 'updater');
+        }
 
         return ['ok' => true, 'msg' => 'Actualización ejecutada', 'changes' => $changes];
     }
@@ -161,6 +164,9 @@ final class CL_LIQ_Updater {
         }
 
         self::log('rollback', 'Rollback aplicado (snapshot restaurado)', ['ts' => (int)($snap['ts'] ?? 0)]);
+        if (class_exists('CL_LIQ_Audit')) {
+            CL_LIQ_Audit::log_event('updater_rollback', 'Rollback aplicado', ['snapshot_ts' => (int)($snap['ts'] ?? 0)], 'updater');
+        }
         return ['ok' => true, 'msg' => 'Rollback aplicado.'];
     }
 
