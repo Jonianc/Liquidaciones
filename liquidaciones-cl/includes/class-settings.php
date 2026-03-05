@@ -17,6 +17,24 @@ final class CL_LIQ_Settings {
         return trailingslashit(home_url('/' . $slug . '/'));
     }
 
+    private static function t(string $text): string {
+        return esc_html__($text, 'liquidaciones-cl');
+    }
+
+    private static function quick_links(string $base): array {
+        return [
+            ['label' => __('Frontend: Listado de liquidaciones', 'liquidaciones-cl'), 'url' => $base, 'blank' => true],
+            ['label' => __('Frontend: Nueva liquidación', 'liquidaciones-cl'), 'url' => $base . 'nueva/', 'blank' => true],
+            ['label' => __('Frontend: Empleados', 'liquidaciones-cl'), 'url' => $base . 'empleados/', 'blank' => true],
+            ['label' => __('Frontend: Nuevo empleado', 'liquidaciones-cl'), 'url' => $base . 'empleados/nuevo/', 'blank' => true],
+            ['label' => __('Frontend: Períodos', 'liquidaciones-cl'), 'url' => $base . 'periodos/', 'blank' => true],
+            ['label' => __('Frontend: Nuevo período', 'liquidaciones-cl'), 'url' => $base . 'periodos/nuevo/', 'blank' => true],
+            ['label' => __('Admin: Empleados', 'liquidaciones-cl'), 'url' => admin_url('edit.php?post_type=cl_empleado'), 'blank' => false],
+            ['label' => __('Admin: Períodos', 'liquidaciones-cl'), 'url' => admin_url('edit.php?post_type=cl_periodo'), 'blank' => false],
+            ['label' => __('Admin: Liquidaciones', 'liquidaciones-cl'), 'url' => admin_url('edit.php?post_type=cl_liquidacion'), 'blank' => false],
+        ];
+    }
+
     public static function init() {
         add_action('admin_menu', [__CLASS__, 'admin_menu']);
         add_action('init', [__CLASS__, 'maybe_upgrade'], 9);
@@ -282,18 +300,13 @@ final class CL_LIQ_Settings {
 
         $fe_base = self::frontend_base_url();
         echo '<div style="margin:12px 0 18px;padding:12px;border:1px solid #e5e7eb;background:#fff;border-radius:8px">';
-        echo '<h2 style="margin-top:0">Rutas de acceso rápido</h2>';
-        echo '<p class="description">Accesos directos al frontend del plugin y a pantallas admin.</p>';
+        echo '<h2 style="margin-top:0">' . self::t('Rutas de acceso rápido') . '</h2>'; 
+        echo '<p class="description">' . self::t('Accesos directos al frontend del plugin y a pantallas admin.') . '</p>'; 
         echo '<ul style="margin:8px 0 0 18px;line-height:1.8">';
-        echo '<li><a target="_blank" href="' . esc_url($fe_base) . '">Frontend: Listado de liquidaciones</a></li>';
-        echo '<li><a target="_blank" href="' . esc_url($fe_base . 'nueva/') . '">Frontend: Nueva liquidación</a></li>';
-        echo '<li><a target="_blank" href="' . esc_url($fe_base . 'empleados/') . '">Frontend: Empleados</a></li>';
-        echo '<li><a target="_blank" href="' . esc_url($fe_base . 'empleados/nuevo/') . '">Frontend: Nuevo empleado</a></li>';
-        echo '<li><a target="_blank" href="' . esc_url($fe_base . 'periodos/') . '">Frontend: Períodos</a></li>';
-        echo '<li><a target="_blank" href="' . esc_url($fe_base . 'periodos/nuevo/') . '">Frontend: Nuevo período</a></li>';
-        echo '<li><a href="' . esc_url(admin_url('edit.php?post_type=cl_empleado')) . '">Admin: Empleados</a></li>';
-        echo '<li><a href="' . esc_url(admin_url('edit.php?post_type=cl_periodo')) . '">Admin: Períodos</a></li>';
-        echo '<li><a href="' . esc_url(admin_url('edit.php?post_type=cl_liquidacion')) . '">Admin: Liquidaciones</a></li>';
+        foreach (self::quick_links($fe_base) as $link) {
+            $target = !empty($link['blank']) ? ' target="_blank"' : '';
+            echo '<li><a' . $target . ' href="' . esc_url((string) $link['url']) . '">' . esc_html((string) $link['label']) . '</a></li>';
+        }
         echo '</ul>';
         echo '</div>';
         // Notices from updater actions
@@ -357,7 +370,7 @@ final class CL_LIQ_Settings {
 
         $audit_log = class_exists('CL_LIQ_Audit') ? CL_LIQ_Audit::get_log(20) : [];
         echo '<div style="margin:12px 0 18px;padding:12px;border:1px solid #e5e7eb;background:#fff;border-radius:8px">';
-        echo '<h2 style="margin-top:0">Auditoría operativa</h2>';
+        echo '<h2 style="margin-top:0">' . self::t('Auditoría operativa') . '</h2>'; 
         echo '<p class="description">Registra quién creó/actualizó entidades y acciones del updater. Se guardan hasta 200 eventos.</p>';
         if (!empty($audit_log)) {
             echo '<table class="widefat striped"><thead><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Entidad</th><th>ID</th><th>Contexto</th><th>Cambios</th></tr></thead><tbody>';
@@ -383,7 +396,7 @@ final class CL_LIQ_Settings {
             }
             echo '</tbody></table>';
         } else {
-            echo '<p>No hay eventos de auditoría todavía.</p>';
+            echo '<p>' . self::t('No hay eventos de auditoría todavía.') . '</p>'; 
         }
         echo '</div>';
 

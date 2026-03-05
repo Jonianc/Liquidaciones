@@ -410,7 +410,7 @@ final class CL_LIQ_Frontend {
                 ];
                 foreach ($numeric_fields as $nf) {
                     if (CL_LIQ_Helpers::is_negative_number_input($data[$nf] ?? '')) {
-                        $error = 'No se permiten valores negativos en el formulario.';
+                        $error = __('No se permiten valores negativos en el formulario.', 'liquidaciones-cl');
                         break;
                     }
                 }
@@ -851,7 +851,7 @@ final class CL_LIQ_Frontend {
                     if ($is_edit && !$error) {
                         $rut_raw = sanitize_text_field(wp_unslash($_POST['cl_rut'] ?? ''));
                         if ($rut_raw !== '' && !CL_LIQ_Helpers::validate_rut($rut_raw)) {
-                            $error = 'RUT inválido. Verifica formato y dígito verificador.';
+                            $error = __('RUT inválido. Verifica formato y dígito verificador.', 'liquidaciones-cl');
                         }
                         $rut = CL_LIQ_Helpers::format_rut($rut_raw);
 
@@ -1076,11 +1076,11 @@ final class CL_LIQ_Frontend {
             } else {
                 $ym = sanitize_text_field(wp_unslash($_POST['cl_ym'] ?? CL_LIQ_Helpers::current_ym()));
                 if (!preg_match('/^\d{4}-\d{2}$/', $ym)) {
-                    $error = 'Período inválido (usa YYYY-MM).';
+                    $error = __('Período inválido (usa YYYY-MM).', 'liquidaciones-cl');
                 } elseif (CL_LIQ_Helpers::period_exists($ym, $is_edit ? $per_id : 0)) {
-                    $error = 'Ya existe un período con ese YYYY-MM.';
+                    $error = __('Ya existe un período con ese YYYY-MM.', 'liquidaciones-cl');
                 } elseif (CL_LIQ_Helpers::is_negative_number_input($_POST['cl_uf_value'] ?? '')) {
-                    $error = 'UF inválida: no se permiten valores negativos.';
+                    $error = __('UF inválida: no se permiten valores negativos.', 'liquidaciones-cl');
                 } else {
                     $uf = CL_LIQ_Helpers::parse_decimal($_POST['cl_uf_value'] ?? 0);
 

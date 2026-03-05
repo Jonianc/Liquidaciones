@@ -2,6 +2,14 @@
 
 Todos los cambios importantes de este plugin se documentan en este archivo.
 
+## [1.7.0] - 2026-03-04
+### Agregado
+- Carga de text domain (`liquidaciones-cl`) para habilitar traducciones del plugin.
+- Centralización de enlaces rápidos en Ajustes con helper reutilizable y labels traducibles.
+
+### Cambiado
+- Mensajes de validación en frontend migrados a funciones i18n (`__`).
+
 ## [1.6.2] - 2026-03-04
 ### Agregado
 - Sección **Rutas de acceso rápido** en Ajustes (Parámetros) con enlaces directos al frontend y admin del plugin.
