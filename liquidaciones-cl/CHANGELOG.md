@@ -2,6 +2,14 @@
 
 Todos los cambios importantes de este plugin se documentan en este archivo.
 
+## [1.10.0] - 2026-03-04
+### Agregado
+- Logger central del plugin con niveles y gate por configuración (`logging.enabled` + `logging.level`).
+- Controles en Ajustes para activar/desactivar observabilidad y definir nivel mínimo.
+
+### Cambiado
+- Se instrumentan validaciones frontend y updater UF HTTP con logs estructurados para diagnóstico.
+
 ## [1.9.0] - 2026-03-04
 ### Agregado
 - Suite de tests CLI para el motor de cálculo en `tests/calculator-tests.php`.

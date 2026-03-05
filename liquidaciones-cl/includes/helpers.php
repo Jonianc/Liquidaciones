@@ -168,6 +168,47 @@ final class CL_LIQ_Helpers {
         return false;
     }
 
+
+
+    private static function log_priority(string $level): int {
+        $map = [
+            'error' => 0,
+            'warning' => 1,
+            'info' => 2,
+            'debug' => 3,
+        ];
+        $level = strtolower(trim($level));
+        return $map[$level] ?? 2;
+    }
+
+    public static function plugin_log(string $level, string $message, array $context = []): void {
+        if (!function_exists('get_option')) return;
+
+        $settings = get_option('cl_liq_settings', []);
+        $cfg = is_array($settings) ? ($settings['logging'] ?? []) : [];
+        $enabled = (int) ($cfg['enabled'] ?? 0) === 1;
+        if (!$enabled) return;
+
+        $threshold = (string) ($cfg['level'] ?? 'error');
+        if (self::log_priority($level) > self::log_priority($threshold)) {
+            return;
+        }
+
+        $safe = [];
+        foreach ($context as $k => $v) {
+            $key = sanitize_text_field((string) $k);
+            if (is_scalar($v) || $v === null) {
+                $safe[$key] = (string) $v;
+            }
+        }
+
+        $line = '[Liquidaciones CL][' . strtoupper($level) . '] ' . sanitize_text_field($message);
+        if (!empty($safe)) {
+            $line .= ' ' . wp_json_encode($safe);
+        }
+        error_log($line);
+    }
+
     public static function ym_label(string $ym): string {
         // ym = YYYY-MM
         $parts = explode('-', $ym);

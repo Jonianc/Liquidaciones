@@ -416,6 +416,7 @@ final class CL_LIQ_Frontend {
                 foreach ($numeric_fields as $nf) {
                     if (CL_LIQ_Helpers::is_negative_number_input($data[$nf] ?? '')) {
                         $error = __('No se permiten valores negativos en el formulario.', 'liquidaciones-cl');
+                        CL_LIQ_Helpers::plugin_log('warning', 'Validación frontend rechazada: valor negativo', ['field' => $nf]);
                         break;
                     }
                 }
@@ -857,6 +858,7 @@ final class CL_LIQ_Frontend {
                         $rut_raw = sanitize_text_field(wp_unslash($_POST['cl_rut'] ?? ''));
                         if ($rut_raw !== '' && !CL_LIQ_Helpers::validate_rut($rut_raw)) {
                             $error = __('RUT inválido. Verifica formato y dígito verificador.', 'liquidaciones-cl');
+                            CL_LIQ_Helpers::plugin_log('warning', 'Validación frontend rechazada: RUT inválido');
                         }
                         $rut = CL_LIQ_Helpers::format_rut($rut_raw);
 
@@ -1082,10 +1084,13 @@ final class CL_LIQ_Frontend {
                 $ym = sanitize_text_field(wp_unslash($_POST['cl_ym'] ?? CL_LIQ_Helpers::current_ym()));
                 if (!preg_match('/^\d{4}-\d{2}$/', $ym)) {
                     $error = __('Período inválido (usa YYYY-MM).', 'liquidaciones-cl');
+                    CL_LIQ_Helpers::plugin_log('warning', 'Validación frontend rechazada: período inválido');
                 } elseif (CL_LIQ_Helpers::period_exists($ym, $is_edit ? $per_id : 0)) {
                     $error = __('Ya existe un período con ese YYYY-MM.', 'liquidaciones-cl');
+                    CL_LIQ_Helpers::plugin_log('warning', 'Validación frontend rechazada: período duplicado', ['ym' => $ym]);
                 } elseif (CL_LIQ_Helpers::is_negative_number_input($_POST['cl_uf_value'] ?? '')) {
                     $error = __('UF inválida: no se permiten valores negativos.', 'liquidaciones-cl');
+                    CL_LIQ_Helpers::plugin_log('warning', 'Validación frontend rechazada: UF negativa', ['ym' => $ym]);
                 } else {
                     $uf = CL_LIQ_Helpers::parse_decimal($_POST['cl_uf_value'] ?? 0);
 

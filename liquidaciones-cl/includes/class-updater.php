@@ -113,6 +113,7 @@ final class CL_LIQ_Updater {
         update_option(self::OPT_LAST_RUN_TS, time(), false);
 
         self::log('run', 'Actualización mensual ejecutada', $changes);
+        CL_LIQ_Helpers::plugin_log('info', 'Updater mensual ejecutado', $changes);
         if (class_exists('CL_LIQ_Audit')) {
             CL_LIQ_Audit::log_event('updater_run', 'Actualización mensual ejecutada', $changes, 'updater');
         }
@@ -164,6 +165,7 @@ final class CL_LIQ_Updater {
         }
 
         self::log('rollback', 'Rollback aplicado (snapshot restaurado)', ['ts' => (int)($snap['ts'] ?? 0)]);
+        CL_LIQ_Helpers::plugin_log('warning', 'Updater rollback aplicado', ['snapshot_ts' => (int)($snap['ts'] ?? 0)]);
         if (class_exists('CL_LIQ_Audit')) {
             CL_LIQ_Audit::log_event('updater_rollback', 'Rollback aplicado', ['snapshot_ts' => (int)($snap['ts'] ?? 0)], 'updater');
         }
@@ -370,30 +372,51 @@ final class CL_LIQ_Updater {
         $date = CL_LIQ_Helpers::ym_last_day($ym);
         $url = str_replace('{date}', rawurlencode($date), $template);
         $url = esc_url_raw($url);
-        if (!$url) return 0.0;
+        if (!$url) {
+            CL_LIQ_Helpers::plugin_log('warning', 'UF HTTP URL inválida', ['ym' => $ym]);
+            return 0.0;
+        }
 
         $resp = wp_remote_get($url, ['timeout' => 8]);
-        if (is_wp_error($resp)) return 0.0;
+        if (is_wp_error($resp)) {
+            CL_LIQ_Helpers::plugin_log('warning', 'UF HTTP request error', ['ym' => $ym, 'url' => $url, 'error' => $resp->get_error_message()]);
+            return 0.0;
+        }
 
         $code = (int) wp_remote_retrieve_response_code($resp);
-        if ($code < 200 || $code >= 300) return 0.0;
+        if ($code < 200 || $code >= 300) {
+            CL_LIQ_Helpers::plugin_log('warning', 'UF HTTP status inválido', ['ym' => $ym, 'url' => $url, 'status' => $code]);
+            return 0.0;
+        }
 
         $body = (string) wp_remote_retrieve_body($resp);
-        if (!$body) return 0.0;
+        if (!$body) {
+            CL_LIQ_Helpers::plugin_log('warning', 'UF HTTP respuesta vacía', ['ym' => $ym, 'url' => $url]);
+            return 0.0;
+        }
 
         // Expect JSON with a "valor" field (common in several indicator APIs), but keep it flexible:
         $json = json_decode($body, true);
-        if (!is_array($json)) return 0.0;
+        if (!is_array($json)) {
+            CL_LIQ_Helpers::plugin_log('warning', 'UF HTTP JSON inválido', ['ym' => $ym, 'url' => $url]);
+            return 0.0;
+        }
 
         // Try common paths
         if (isset($json['serie'][0]['valor'])) {
-            return (float) CL_LIQ_Helpers::parse_decimal($json['serie'][0]['valor']);
+            $val = (float) CL_LIQ_Helpers::parse_decimal($json['serie'][0]['valor']);
+            CL_LIQ_Helpers::plugin_log('debug', 'UF HTTP valor obtenido (serie)', ['ym' => $ym, 'value' => $val]);
+            return $val;
         }
         if (isset($json['valor'])) {
-            return (float) CL_LIQ_Helpers::parse_decimal($json['valor']);
+            $val = (float) CL_LIQ_Helpers::parse_decimal($json['valor']);
+            CL_LIQ_Helpers::plugin_log('debug', 'UF HTTP valor obtenido (valor)', ['ym' => $ym, 'value' => $val]);
+            return $val;
         }
         if (isset($json['UF'])) {
-            return (float) CL_LIQ_Helpers::parse_decimal($json['UF']);
+            $val = (float) CL_LIQ_Helpers::parse_decimal($json['UF']);
+            CL_LIQ_Helpers::plugin_log('debug', 'UF HTTP valor obtenido (UF)', ['ym' => $ym, 'value' => $val]);
+            return $val;
         }
 
         return 0.0;

@@ -129,6 +129,10 @@ final class CL_LIQ_Settings {
                 'uf_source' => 'copy_prev', // copy_prev|http
                 'uf_http_url' => '', // template with {date} placeholder
             ],
+            'logging' => [
+                'enabled' => 0,
+                'level' => 'error', // error|warning|info|debug
+            ],
         ];
     }
 
@@ -250,6 +254,17 @@ final class CL_LIQ_Settings {
             'months_forward' => $months_forward,
             'uf_source' => $uf_source,
             'uf_http_url' => $uf_http_url,
+        ];
+
+        // Logging / observabilidad
+        $log_enabled = isset($in['logging']['enabled']) ? 1 : 0;
+        $log_level = sanitize_text_field($in['logging']['level'] ?? ($d['logging']['level'] ?? 'error'));
+        if (!in_array($log_level, ['error', 'warning', 'info', 'debug'], true)) {
+            $log_level = 'error';
+        }
+        $d['logging'] = [
+            'enabled' => $log_enabled,
+            'level' => $log_level,
         ];
 
         // Tax tables (JSON textarea)
@@ -429,6 +444,19 @@ final class CL_LIQ_Settings {
         echo '<p class="description">Si eliges HTTP, ingresa una URL template con {date}. Ejemplo: https://ejemplo/api/uf/{date} (donde {date}=YYYY-MM-DD).</p>';
         echo '<input name="cl_liq[auto_update][uf_http_url]" type="text" value="' . esc_attr((string)$au['uf_http_url']) . '" class="regular-text" placeholder="https://.../{date}">';
         echo '</td></tr>';
+        echo '</tbody></table>';
+
+        echo '<h2>Logging / Observabilidad</h2>';
+        $lg = $settings['logging'] ?? [];
+        $lg = wp_parse_args($lg, ['enabled' => 0, 'level' => 'error']);
+        echo '<table class="form-table" role="presentation"><tbody>';
+        echo '<tr><th scope="row">Activar logging</th><td><label><input type="checkbox" name="cl_liq[logging][enabled]" value="1" ' . checked((int)$lg['enabled'], 1, false) . '> Escribir eventos en error_log según nivel seleccionado</label></td></tr>';
+        echo '<tr><th scope="row">Nivel mínimo</th><td><select name="cl_liq[logging][level]">';
+        echo '<option value="error" ' . selected($lg['level'], 'error', false) . '>Error</option>';
+        echo '<option value="warning" ' . selected($lg['level'], 'warning', false) . '>Warning</option>';
+        echo '<option value="info" ' . selected($lg['level'], 'info', false) . '>Info</option>';
+        echo '<option value="debug" ' . selected($lg['level'], 'debug', false) . '>Debug</option>';
+        echo '</select><p class="description">Se registran eventos del plugin como validaciones rechazadas y fallos HTTP del updater.</p></td></tr>';
         echo '</tbody></table>';
 
         echo '<h2>Topes imponibles (UF)</h2>';
