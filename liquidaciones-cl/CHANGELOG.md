@@ -2,6 +2,11 @@
 
 Todos los cambios importantes de este plugin se documentan en este archivo.
 
+## [1.9.0] - 2026-03-04
+### Agregado
+- Suite de tests CLI para el motor de cálculo en `tests/calculator-tests.php`.
+- Cobertura de casos para `calc_impuesto_unico` y escenario base de `calculate_liquidacion`.
+
 ## [1.8.0] - 2026-03-04
 ### Agregado
 - Frontend: enlace "Saltar al contenido principal" (skip-link).
