@@ -2,6 +2,15 @@
 
 Todos los cambios importantes de este plugin se documentan en este archivo.
 
+## [1.8.0] - 2026-03-04
+### Agregado
+- Frontend: enlace "Saltar al contenido principal" (skip-link).
+- Frontend: mejoras de foco visible para enlaces, botones e inputs.
+- Frontend: utilidades `sr-only` y captions accesibles en tablas de listados.
+
+### Cambiado
+- Mensajes de estado/error en frontend ahora incluyen `role` y `aria-live` para accesibilidad.
+
 ## [1.7.0] - 2026-03-04
 ### Agregado
 - Carga de text domain (`liquidaciones-cl`) para habilitar traducciones del plugin.
