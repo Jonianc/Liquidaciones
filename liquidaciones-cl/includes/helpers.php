@@ -83,6 +83,132 @@ final class CL_LIQ_Helpers {
         }
     }
 
+
+
+    public static function is_negative_number_input($value): bool {
+        if ($value === null) return false;
+        $s = trim((string) $value);
+        if ($s === '') return false;
+        return preg_match('/^\s*-/', $s) === 1;
+    }
+
+    public static function normalize_rut(string $rut): string {
+        $rut = strtoupper(trim($rut));
+        $rut = preg_replace('/[^0-9K]/', '', $rut);
+        return (string) $rut;
+    }
+
+    public static function format_rut(string $rut): string {
+        $rut = self::normalize_rut($rut);
+        if (!preg_match('/^[0-9]{7,8}[0-9K]$/', $rut)) {
+            return $rut;
+        }
+
+        $body = substr($rut, 0, -1);
+        $dv = substr($rut, -1);
+
+        $rev = strrev($body);
+        $parts = str_split($rev, 3);
+        $body_fmt = strrev(implode('.', $parts));
+
+        return $body_fmt . '-' . $dv;
+    }
+
+    public static function validate_rut(string $rut): bool {
+        $rut = self::normalize_rut($rut);
+        if ($rut === '') return true;
+
+        if (!preg_match('/^[0-9]{7,8}[0-9K]$/', $rut)) return false;
+
+        $body = substr($rut, 0, -1);
+        $dv = substr($rut, -1);
+
+        $sum = 0;
+        $mul = 2;
+        for ($i = strlen($body) - 1; $i >= 0; $i--) {
+            $sum += ((int) $body[$i]) * $mul;
+            $mul = ($mul === 7) ? 2 : $mul + 1;
+        }
+
+        $mod = 11 - ($sum % 11);
+        if ($mod === 11) {
+            $expected = '0';
+        } elseif ($mod === 10) {
+            $expected = 'K';
+        } else {
+            $expected = (string) $mod;
+        }
+
+        return $dv === $expected;
+    }
+
+    public static function period_exists(string $ym, int $exclude_id = 0): bool {
+        $ym = trim($ym);
+        if (!preg_match('/^\d{4}-\d{2}$/', $ym)) return false;
+
+        $ids = get_posts([
+            'post_type' => 'cl_periodo',
+            'post_status' => 'any',
+            'numberposts' => 10,
+            'fields' => 'ids',
+            'meta_query' => [
+                [
+                    'key' => 'cl_ym',
+                    'value' => $ym,
+                    'compare' => '=',
+                ]
+            ],
+        ]);
+
+        if (!$ids) return false;
+        foreach ($ids as $id) {
+            $id = (int) $id;
+            if ($id > 0 && $id !== $exclude_id) return true;
+        }
+        return false;
+    }
+
+
+
+    private static function log_priority(string $level): int {
+        $map = [
+            'error' => 0,
+            'warning' => 1,
+            'info' => 2,
+            'debug' => 3,
+        ];
+        $level = strtolower(trim($level));
+        return $map[$level] ?? 2;
+    }
+
+    public static function plugin_log(string $level, string $message, array $context = []): void {
+        if (!function_exists('get_option')) return;
+
+        $settings = get_option('cl_liq_settings', []);
+        $cfg = is_array($settings) ? ($settings['logging'] ?? []) : [];
+        $enabled = (int) ($cfg['enabled'] ?? 0) === 1;
+        if (!$enabled) return;
+
+        $threshold = (string) ($cfg['level'] ?? 'error');
+        if (self::log_priority($level) > self::log_priority($threshold)) {
+            return;
+        }
+
+        $safe = [];
+        foreach ($context as $k => $v) {
+            $key = sanitize_text_field((string) $k);
+            if (is_scalar($v) || $v === null) {
+                $safe[$key] = (string) $v;
+            }
+        }
+
+        $line = '[Liquidaciones CL][' . strtoupper($level) . '] ' . sanitize_text_field($message);
+        if (!empty($safe)) {
+            $line .= ' ' . wp_json_encode($safe);
+        }
+        error_log($line);
+    }
+
     public static function ym_label(string $ym): string {
         // ym = YYYY-MM
         $parts = explode('-', $ym);

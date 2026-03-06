@@ -4,7 +4,7 @@ Tags: liquidaciones, sueldo, chile, afp, fonasa, isapre, impuesto unico
 Requires at least: 6.0
 Tested up to: 6.5
 Requires PHP: 7.4
-Stable tag: 1.3.1
+Stable tag: 1.11.0
 License: GPLv2 or later
 
 Genera liquidaciones de sueldo (Chile) en WordPress: empleados, períodos y liquidaciones con cálculos automáticos y PDF. Incluye una pantalla de gestión en frontend por URL (sin depender del theme).
@@ -31,6 +31,56 @@ Rutas (requiere login + capacidad manage_cl_liquidaciones):
 Nota: si instalaste/actualizaste y devuelve 404, entra a Ajustes > Enlaces permanentes y guarda (o reactiva el plugin) para refrescar rewrite rules.
 
 == Changelog ==
+= 1.11.0 =
+* PDF: nuevo renderer interno con layout por secciones, tablas simples, metadata del documento y soporte multipagina.
+* PDF UX: cabecera estructurada, tarjetas de datos, resumen final y pie con numeracion de pagina.
+
+= 1.10.0 =
+* Observabilidad: nuevo logger central (`CL_LIQ_Helpers::plugin_log`) con niveles `error|warning|info|debug` y switch por configuración.
+* Parámetros: nueva sección Logging/Observabilidad (activar + nivel mínimo) para controlar escritura en `error_log`.
+* Logging: se agregan eventos en validaciones frontend y en flujo HTTP del updater (errores de URL/request/status/JSON y resultados debug).
+
+= 1.9.0 =
+* Tests: se agrega suite CLI para validar el motor de cálculo (`CL_LIQ_Calculator`) con escenarios base e impuesto único.
+* DX: script de prueba auto-contenido en `tests/calculator-tests.php` con stubs mínimos para ejecutar sin bootstrap completo de WordPress.
+
+= 1.8.0 =
+* Accesibilidad: skip-link al contenido principal y mejoras de foco visible (focus-visible) en frontend.
+* Accesibilidad: mensajes de éxito/error con roles ARIA (`status` / `alert`) para lectores de pantalla.
+* Accesibilidad: captions ocultos (`sr-only`) en tablas de listados frontend.
+
+= 1.7.0 =
+* i18n: carga de text domain del plugin en bootstrap.
+* i18n/DX: centralización de enlaces rápidos en Ajustes mediante helper y labels traducibles.
+* i18n: internacionalización de mensajes de validación en frontend (RUT, período y negativos).
+
+= 1.6.2 =
+* Ajustes: nueva sección "Rutas de acceso rápido" en Parámetros con accesos directos a frontend y pantallas admin.
+* UX: enlaces rápidos para listado/nueva liquidación, empleados/períodos (listado y nuevo).
+
+= 1.6.1 =
+* Fix RUT: validación consistente de RUT en admin/frontend usando normalización previa.
+* Fix RUT: formateo automático al guardar en formato 12.345.678-K.
+* UX RUT: autoformateo del campo RUT al perder foco (admin y frontend empleados).
+* Fix frontend empleados: si el RUT es inválido, se evita guardar y se muestra error sin redirección.
+
+= 1.6.0 =
+* Validación: RUT chileno (con dígito verificador) en guardado de empleados (frontend y admin).
+* Validación: bloqueo de períodos duplicados (YYYY-MM) en creación/edición de períodos (frontend y admin).
+* Validación: bloqueo de valores negativos en campos numéricos críticos de liquidación y UF.
+* Interno: nuevas utilidades en helpers para reglas de negocio (RUT, período duplicado y negativos).
+
+= 1.5.0 =
+* Auditoría operativa: registro de creación/actualización de empleados, períodos y liquidaciones (admin y frontend), incluyendo usuario, contexto y cambios.
+* Auditoría operativa: registro de ejecución y rollback del updater en el historial de auditoría.
+* Parámetros: nueva sección "Auditoría operativa" con últimos eventos y detalle de cambios.
+* Interno: nuevo módulo `CL_LIQ_Audit` para centralizar snapshots, diffs y retención del log (máx. 200 eventos).
+
+= 1.4.0 =
+* Seguridad/roles: capabilities personalizadas por CPT (empleados, períodos y liquidaciones).
+* Seguridad: menúes y handlers principales migrados a capacidades del plugin (manage_cl_liquidaciones + caps por entidad), evitando dependencia directa de manage_options.
+* Migración: en activación/upgrade se asignan automáticamente las nuevas capabilities al rol administrador.
+
 = 1.3.1 =
 * Fix: handlers admin-post para "Actualizar ahora" y "Rollback" (evita fatal error).
 

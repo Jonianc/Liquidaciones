@@ -6,6 +6,35 @@ final class CL_LIQ_Settings {
     const OPTION_KEY = 'cl_liq_settings';
     const VERSION_OPTION = 'cl_liq_plugin_version';
 
+    private static function can_manage(): bool {
+        return current_user_can('manage_cl_liquidaciones') || current_user_can('manage_options');
+    }
+
+    private static function frontend_base_url(): string {
+        $slug = apply_filters('cl_liq_front_slug', class_exists('CL_LIQ_Frontend') ? CL_LIQ_Frontend::SLUG_DEFAULT : 'liquidaciones-cl');
+        $slug = sanitize_title_with_dashes((string) $slug);
+        if (!$slug) $slug = 'liquidaciones-cl';
+        return trailingslashit(home_url('/' . $slug . '/'));
+    }
+
+    private static function t(string $text): string {
+        return esc_html__($text, 'liquidaciones-cl');
+    }
+
+    private static function quick_links(string $base): array {
+        return [
+            ['label' => __('Frontend: Listado de liquidaciones', 'liquidaciones-cl'), 'url' => $base, 'blank' => true],
+            ['label' => __('Frontend: Nueva liquidación', 'liquidaciones-cl'), 'url' => $base . 'nueva/', 'blank' => true],
+            ['label' => __('Frontend: Empleados', 'liquidaciones-cl'), 'url' => $base . 'empleados/', 'blank' => true],
+            ['label' => __('Frontend: Nuevo empleado', 'liquidaciones-cl'), 'url' => $base . 'empleados/nuevo/', 'blank' => true],
+            ['label' => __('Frontend: Períodos', 'liquidaciones-cl'), 'url' => $base . 'periodos/', 'blank' => true],
+            ['label' => __('Frontend: Nuevo período', 'liquidaciones-cl'), 'url' => $base . 'periodos/nuevo/', 'blank' => true],
+            ['label' => __('Admin: Empleados', 'liquidaciones-cl'), 'url' => admin_url('edit.php?post_type=cl_empleado'), 'blank' => false],
+            ['label' => __('Admin: Períodos', 'liquidaciones-cl'), 'url' => admin_url('edit.php?post_type=cl_periodo'), 'blank' => false],
+            ['label' => __('Admin: Liquidaciones', 'liquidaciones-cl'), 'url' => admin_url('edit.php?post_type=cl_liquidacion'), 'blank' => false],
+        ];
+    }
+
     public static function init() {
         add_action('admin_menu', [__CLASS__, 'admin_menu']);
         add_action('init', [__CLASS__, 'maybe_upgrade'], 9);
@@ -100,6 +129,10 @@ final class CL_LIQ_Settings {
                 'uf_source' => 'copy_prev', // copy_prev|http
                 'uf_http_url' => '', // template with {date} placeholder
             ],
+            'logging' => [
+                'enabled' => 0,
+                'level' => 'error', // error|warning|info|debug
+            ],
         ];
     }
 
@@ -112,22 +145,22 @@ final class CL_LIQ_Settings {
         add_menu_page(
             __('Liquidaciones CL', 'liquidaciones-cl'),
             __('Liquidaciones CL', 'liquidaciones-cl'),
-            'manage_options',
+            'manage_cl_liquidaciones',
             'cl-liquidaciones',
             [__CLASS__, 'render_home'],
             'dashicons-media-spreadsheet',
             26
         );
 
-        add_submenu_page('cl-liquidaciones', __('Empleados', 'liquidaciones-cl'), __('Empleados', 'liquidaciones-cl'), 'manage_options', 'edit.php?post_type=cl_empleado');
-        add_submenu_page('cl-liquidaciones', __('Períodos', 'liquidaciones-cl'), __('Períodos', 'liquidaciones-cl'), 'manage_options', 'edit.php?post_type=cl_periodo');
-        add_submenu_page('cl-liquidaciones', __('Liquidaciones', 'liquidaciones-cl'), __('Liquidaciones', 'liquidaciones-cl'), 'manage_options', 'edit.php?post_type=cl_liquidacion');
-        add_submenu_page('cl-liquidaciones', __('Parámetros', 'liquidaciones-cl'), __('Parámetros', 'liquidaciones-cl'), 'manage_options', 'cl-liquidaciones-settings', [__CLASS__, 'render_settings']);
-        add_submenu_page('cl-liquidaciones', __('Ayuda', 'liquidaciones-cl'), __('Ayuda', 'liquidaciones-cl'), 'manage_options', 'cl-liquidaciones-help', [__CLASS__, 'render_help']);
+        add_submenu_page('cl-liquidaciones', __('Empleados', 'liquidaciones-cl'), __('Empleados', 'liquidaciones-cl'), 'edit_cl_empleados', 'edit.php?post_type=cl_empleado');
+        add_submenu_page('cl-liquidaciones', __('Períodos', 'liquidaciones-cl'), __('Períodos', 'liquidaciones-cl'), 'edit_cl_periodos', 'edit.php?post_type=cl_periodo');
+        add_submenu_page('cl-liquidaciones', __('Liquidaciones', 'liquidaciones-cl'), __('Liquidaciones', 'liquidaciones-cl'), 'edit_cl_liquidaciones', 'edit.php?post_type=cl_liquidacion');
+        add_submenu_page('cl-liquidaciones', __('Parámetros', 'liquidaciones-cl'), __('Parámetros', 'liquidaciones-cl'), 'manage_cl_liquidaciones', 'cl-liquidaciones-settings', [__CLASS__, 'render_settings']);
+        add_submenu_page('cl-liquidaciones', __('Ayuda', 'liquidaciones-cl'), __('Ayuda', 'liquidaciones-cl'), 'manage_cl_liquidaciones', 'cl-liquidaciones-help', [__CLASS__, 'render_help']);
     }
 
     public static function render_home() {
-        if ( ! current_user_can('manage_options') ) return;
+        if ( ! self::can_manage() ) return;
         echo '<div class="wrap">';
         echo '<h1>Liquidaciones CL</h1>';
         echo '<p>Flujo rápido:</p>';
@@ -141,7 +174,7 @@ final class CL_LIQ_Settings {
     }
 
     public static function render_help() {
-        if ( ! current_user_can('manage_options') ) return;
+        if ( ! self::can_manage() ) return;
         echo '<div class="wrap">';
         echo '<h1>Ayuda</h1>';
         echo '<p><strong>Notas:</strong></p>';
@@ -223,6 +256,17 @@ final class CL_LIQ_Settings {
             'uf_http_url' => $uf_http_url,
         ];
 
+        // Logging / observabilidad
+        $log_enabled = isset($in['logging']['enabled']) ? 1 : 0;
+        $log_level = sanitize_text_field($in['logging']['level'] ?? ($d['logging']['level'] ?? 'error'));
+        if (!in_array($log_level, ['error', 'warning', 'info', 'debug'], true)) {
+            $log_level = 'error';
+        }
+        $d['logging'] = [
+            'enabled' => $log_enabled,
+            'level' => $log_level,
+        ];
+
         // Tax tables (JSON textarea)
         if (!empty($in['tax_json'])) {
             $json = json_decode(wp_unslash($in['tax_json']), true);
@@ -251,7 +295,7 @@ final class CL_LIQ_Settings {
     }
 
     public static function render_settings() {
-        if ( ! current_user_can('manage_options') ) return;
+        if ( ! self::can_manage() ) return;
 
         $settings = self::get();
 
@@ -268,6 +312,18 @@ final class CL_LIQ_Settings {
 
         echo '<div class="wrap">';
         echo '<h1>Parámetros</h1>';
+
+        $fe_base = self::frontend_base_url();
+        echo '<div style="margin:12px 0 18px;padding:12px;border:1px solid #e5e7eb;background:#fff;border-radius:8px">';
+        echo '<h2 style="margin-top:0">' . self::t('Rutas de acceso rápido') . '</h2>'; 
+        echo '<p class="description">' . self::t('Accesos directos al frontend del plugin y a pantallas admin.') . '</p>'; 
+        echo '<ul style="margin:8px 0 0 18px;line-height:1.8">';
+        foreach (self::quick_links($fe_base) as $link) {
+            $target = !empty($link['blank']) ? ' target="_blank"' : '';
+            echo '<li><a' . $target . ' href="' . esc_url((string) $link['url']) . '">' . esc_html((string) $link['label']) . '</a></li>';
+        }
+        echo '</ul>';
+        echo '</div>';
         // Notices from updater actions
         $auto_msg = sanitize_text_field(wp_unslash($_GET['auto_msg'] ?? ''));
         if ($auto_msg) {
@@ -327,6 +383,38 @@ final class CL_LIQ_Settings {
 
         echo '</div>';
 
+        $audit_log = class_exists('CL_LIQ_Audit') ? CL_LIQ_Audit::get_log(20) : [];
+        echo '<div style="margin:12px 0 18px;padding:12px;border:1px solid #e5e7eb;background:#fff;border-radius:8px">';
+        echo '<h2 style="margin-top:0">' . self::t('Auditoría operativa') . '</h2>'; 
+        echo '<p class="description">Registra quién creó/actualizó entidades y acciones del updater. Se guardan hasta 200 eventos.</p>';
+        if (!empty($audit_log)) {
+            echo '<table class="widefat striped"><thead><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Entidad</th><th>ID</th><th>Contexto</th><th>Cambios</th></tr></thead><tbody>';
+            foreach ($audit_log as $row) {
+                $ts = (int) ($row['ts'] ?? 0);
+                $uid = (int) ($row['user'] ?? 0);
+                $user = $uid > 0 ? get_userdata($uid) : null;
+                $uname = $user ? $user->user_login : 'sistema';
+                $action = (string) ($row['action'] ?? '');
+                $entity = (string) ($row['entity_type'] ?? '');
+                $eid = (int) ($row['entity_id'] ?? 0);
+                $ctx = (string) ($row['context'] ?? '');
+                $changes = $row['changes'] ?? [];
+                echo '<tr>';
+                echo '<td>' . esc_html($ts ? wp_date('Y-m-d H:i', $ts) : '—') . '</td>';
+                echo '<td>' . esc_html($uname) . '</td>';
+                echo '<td>' . esc_html($action) . '</td>';
+                echo '<td>' . esc_html($entity) . '</td>';
+                echo '<td>' . esc_html($eid ? (string) $eid : '—') . '</td>';
+                echo '<td>' . esc_html($ctx ?: '—') . '</td>';
+                echo '<td><code>' . esc_html(wp_json_encode($changes)) . '</code></td>';
+                echo '</tr>';
+            }
+            echo '</tbody></table>';
+        } else {
+            echo '<p>' . self::t('No hay eventos de auditoría todavía.') . '</p>'; 
+        }
+        echo '</div>';
+
         echo '<form method="post">';
         wp_nonce_field('cl_liq_save_settings');
 
@@ -356,6 +444,19 @@ final class CL_LIQ_Settings {
         echo '<p class="description">Si eliges HTTP, ingresa una URL template con {date}. Ejemplo: https://ejemplo/api/uf/{date} (donde {date}=YYYY-MM-DD).</p>';
         echo '<input name="cl_liq[auto_update][uf_http_url]" type="text" value="' . esc_attr((string)$au['uf_http_url']) . '" class="regular-text" placeholder="https://.../{date}">';
         echo '</td></tr>';
+        echo '</tbody></table>';
+
+        echo '<h2>Logging / Observabilidad</h2>';
+        $lg = $settings['logging'] ?? [];
+        $lg = wp_parse_args($lg, ['enabled' => 0, 'level' => 'error']);
+        echo '<table class="form-table" role="presentation"><tbody>';
+        echo '<tr><th scope="row">Activar logging</th><td><label><input type="checkbox" name="cl_liq[logging][enabled]" value="1" ' . checked((int)$lg['enabled'], 1, false) . '> Escribir eventos en error_log según nivel seleccionado</label></td></tr>';
+        echo '<tr><th scope="row">Nivel mínimo</th><td><select name="cl_liq[logging][level]">';
+        echo '<option value="error" ' . selected($lg['level'], 'error', false) . '>Error</option>';
+        echo '<option value="warning" ' . selected($lg['level'], 'warning', false) . '>Warning</option>';
+        echo '<option value="info" ' . selected($lg['level'], 'info', false) . '>Info</option>';
+        echo '<option value="debug" ' . selected($lg['level'], 'debug', false) . '>Debug</option>';
+        echo '</select><p class="description">Se registran eventos del plugin como validaciones rechazadas y fallos HTTP del updater.</p></td></tr>';
         echo '</tbody></table>';
 
         echo '<h2>Topes imponibles (UF)</h2>';
@@ -411,7 +512,7 @@ final class CL_LIQ_Settings {
 
 
     public static function handle_run_update() {
-        if ( ! current_user_can('manage_options') ) {
+        if ( ! self::can_manage() ) {
             wp_die('No autorizado.');
         }
         check_admin_referer('cl_liq_run_update');
@@ -438,7 +539,7 @@ final class CL_LIQ_Settings {
     }
 
     public static function handle_rollback() {
-        if ( ! current_user_can('manage_options') ) {
+        if ( ! self::can_manage() ) {
             wp_die('No autorizado.');
         }
         check_admin_referer('cl_liq_rollback');

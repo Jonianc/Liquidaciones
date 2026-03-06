@@ -38,7 +38,7 @@ final class CL_LIQ_Meta_Boxes {
         $afps = array_keys($settings['afp_commissions']);
 
         echo '<table class="form-table" role="presentation"><tbody>';
-        echo '<tr><th scope="row">RUT</th><td>' . self::field('cl_empleado[cl_rut]', $rut, 'text', 'class="regular-text" placeholder="12.345.678-9"') . '</td></tr>';
+        echo '<tr><th scope="row">RUT</th><td>' . self::field('cl_empleado[cl_rut]', $rut, 'text', 'id="cl-rut-input" class="regular-text" placeholder="12.345.678-9"') . '</td></tr>';
         echo '<tr><th scope="row">Tipo de contrato</th><td><select name="cl_empleado[cl_tipo_contrato]">';
         $opts = [
             'indefinido' => 'Indefinido',
@@ -75,6 +75,7 @@ final class CL_LIQ_Meta_Boxes {
         echo '</select></td></tr>';
 
         echo '</tbody></table>';
+        echo '<script>(function(){var i=document.getElementById("cl-rut-input");if(!i)return;function f(v){v=(v||"").toUpperCase().replace(/[^0-9K]/g,"");if(v.length<2)return v;var b=v.slice(0,-1),d=v.slice(-1);var out="",c=0;for(var x=b.length-1;x>=0;x--){out=b.charAt(x)+out;c++;if(c%3===0&&x!==0)out="."+out;}return out+"-"+d;}i.addEventListener("blur",function(){i.value=f(i.value);});})();</script>';
     }
 
     public static function render_periodo($post) {
@@ -190,13 +191,19 @@ final class CL_LIQ_Meta_Boxes {
             if (!wp_verify_nonce($nonce, 'cl_liq_save_empleado')) return;
             if (!current_user_can('edit_post', $post_id)) return;
             $data = $_POST['cl_empleado'] ?? [];
-            update_post_meta($post_id, 'cl_rut', sanitize_text_field($data['cl_rut'] ?? ''));
+            $rut_raw = sanitize_text_field($data['cl_rut'] ?? '');
+            if ($rut_raw !== '' && !CL_LIQ_Helpers::validate_rut($rut_raw)) return;
+            $rut = CL_LIQ_Helpers::format_rut($rut_raw);
+            update_post_meta($post_id, 'cl_rut', $rut);
             update_post_meta($post_id, 'cl_tipo_contrato', sanitize_text_field($data['cl_tipo_contrato'] ?? 'indefinido'));
             update_post_meta($post_id, 'cl_afp', sanitize_text_field($data['cl_afp'] ?? 'Modelo'));
             update_post_meta($post_id, 'cl_salud_tipo', sanitize_text_field($data['cl_salud_tipo'] ?? 'FONASA'));
             update_post_meta($post_id, 'cl_isapre_plan_clp', CL_LIQ_Helpers::parse_clp($data['cl_isapre_plan_clp'] ?? 0));
             update_post_meta($post_id, 'cl_cargas', max(0, (int) ($data['cl_cargas'] ?? 0)));
             update_post_meta($post_id, 'cl_tramo_asig', sanitize_text_field($data['cl_tramo_asig'] ?? 'auto'));
+            if (class_exists('CL_LIQ_Audit')) {
+                CL_LIQ_Audit::log_post_change($post_id, 'cl_empleado', 'admin_save');
+            }
         }
 
         if ($pt === 'cl_periodo') {
@@ -205,8 +212,13 @@ final class CL_LIQ_Meta_Boxes {
             $data = $_POST['cl_periodo'] ?? [];
             $ym = sanitize_text_field($data['cl_ym'] ?? CL_LIQ_Helpers::current_ym());
             if (!preg_match('/^\d{4}-\d{2}$/', $ym)) $ym = CL_LIQ_Helpers::current_ym();
+            if (CL_LIQ_Helpers::period_exists($ym, (int) $post_id)) return;
+            if (CL_LIQ_Helpers::is_negative_number_input($data['cl_uf_value'] ?? '')) return;
             update_post_meta($post_id, 'cl_ym', $ym);
             update_post_meta($post_id, 'cl_uf_value', CL_LIQ_Helpers::parse_decimal($data['cl_uf_value'] ?? 0));
+            if (class_exists('CL_LIQ_Audit')) {
+                CL_LIQ_Audit::log_post_change($post_id, 'cl_periodo', 'admin_save');
+            }
         }
 
         if ($pt === 'cl_liquidacion') {
@@ -214,6 +226,15 @@ final class CL_LIQ_Meta_Boxes {
             if (!current_user_can('edit_post', $post_id)) return;
 
             $data = $_POST['cl_liq'] ?? [];
+
+            $numeric_fields = [
+                'cl_sueldo_base','cl_grat_manual','cl_he_horas','cl_he_valor_hora','cl_bonos_imponibles','cl_comisiones',
+                'cl_otros_imponibles','cl_colacion','cl_movilizacion','cl_viaticos','cl_otros_no_imponibles',
+                'cl_asig_manual_monto','cl_otros_descuentos','cl_anticipos','cl_prestamos'
+            ];
+            foreach ($numeric_fields as $nf) {
+                if (CL_LIQ_Helpers::is_negative_number_input($data[$nf] ?? '')) return;
+            }
 
             $empleado_id = (int) ($data['cl_empleado_id'] ?? 0);
             $periodo_id  = (int) ($data['cl_periodo_id'] ?? 0);
@@ -256,6 +277,10 @@ final class CL_LIQ_Meta_Boxes {
             // calculate + store
             $calc = CL_LIQ_Calculator::calculate_liquidacion($post_id);
             update_post_meta($post_id, 'cl_calc', $calc);
+
+            if (class_exists('CL_LIQ_Audit')) {
+                CL_LIQ_Audit::log_post_change($post_id, 'cl_liquidacion', 'admin_save');
+            }
 
             // auto-title if empty
             $title = get_the_title($post_id);

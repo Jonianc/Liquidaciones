@@ -20,8 +20,17 @@ final class CL_LIQ_Frontend {
 
     private static function add_caps() {
         $role = get_role('administrator');
-        if ($role && !$role->has_cap('manage_cl_liquidaciones')) {
-            $role->add_cap('manage_cl_liquidaciones');
+        if (!$role) return;
+
+        $caps = ['manage_cl_liquidaciones'];
+        if (class_exists('CL_LIQ_CPT')) {
+            $caps = array_merge($caps, CL_LIQ_CPT::all_caps());
+        }
+
+        foreach (array_unique($caps) as $cap) {
+            if (!$role->has_cap($cap)) {
+                $role->add_cap($cap);
+            }
         }
     }
 
@@ -144,6 +153,8 @@ final class CL_LIQ_Frontend {
         echo 'h1{font-size:22px;margin:0 0 12px;}';
         echo 'h2{font-size:16px;margin:18px 0 8px;}';
         echo 'a{color:#0f62fe;text-decoration:none} a:hover{text-decoration:underline}';
+        echo '.skip-link{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden}';
+        echo '.skip-link:focus{left:16px;top:12px;width:auto;height:auto;z-index:10000;background:#111827;color:#fff;padding:8px 10px;border-radius:8px}';
         echo '.topbar{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;margin-bottom:12px}';
         echo '.nav{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 0}';
         echo '.nav a{display:inline-block;padding:6px 10px;border-radius:999px;background:#fff;border:1px solid #e5e7eb;color:#111;font-weight:700;font-size:13px}';
@@ -158,6 +169,8 @@ final class CL_LIQ_Frontend {
         echo '.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}';
         echo 'label{font-size:13px;color:#374151;font-weight:600;display:block;margin:0 0 6px}';
         echo 'input,select{width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;font-size:14px}';
+        echo 'a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #2563eb;outline-offset:2px}';
+        echo '.sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}';
         echo '.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}';
         echo '.note{font-size:13px;color:#6b7280;margin-top:6px}';
         echo '.msg{padding:10px 12px;border-radius:10px;background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;margin:0 0 12px}';
@@ -166,11 +179,12 @@ final class CL_LIQ_Frontend {
         echo '@media(max-width:820px){.grid,.grid3{grid-template-columns:1fr}.topbar{flex-direction:column;align-items:stretch}}';
         echo '</style>';
         echo '</head><body>';
-        echo '<div class="wrap">';
+        echo '<a class="skip-link" href="#cl-main">' . esc_html__('Saltar al contenido principal', 'liquidaciones-cl') . '</a>';
+        echo '<div class="wrap"><main id="cl-main" role="main">';
     }
 
     private static function html_foot() {
-        echo '</div></body></html>';
+        echo '</main></div></body></html>';
     }
 
     private static function render_nav(string $active) {
@@ -278,7 +292,7 @@ final class CL_LIQ_Frontend {
         echo '</div>';
 
         if ($msg === 'saved') {
-            echo '<div class="msg">Guardado.</div>';
+            echo '<div class="msg" role="status" aria-live="polite">Guardado.</div>';
         }
 
         echo '<div class="card">';
@@ -326,7 +340,7 @@ final class CL_LIQ_Frontend {
         echo '</form>';
 
         echo '<div style="overflow:auto">';
-        echo '<table>';
+        echo '<table><caption class="sr-only">Listado de liquidaciones</caption>';
         echo '<thead><tr><th>ID</th><th>Empleado</th><th>Período</th><th>Líquido</th><th>Acciones</th></tr></thead><tbody>';
 
         if ($q->have_posts()) {
@@ -394,7 +408,20 @@ final class CL_LIQ_Frontend {
                 $empleado_id = (int) ($data['cl_empleado_id'] ?? 0);
                 $periodo_id  = (int) ($data['cl_periodo_id'] ?? 0);
 
-                if ($empleado_id <= 0 || $periodo_id <= 0) {
+                $numeric_fields = [
+                    'cl_sueldo_base','cl_grat_manual','cl_he_horas','cl_he_valor_hora','cl_bonos_imponibles','cl_comisiones',
+                    'cl_otros_imponibles','cl_colacion','cl_movilizacion','cl_viaticos','cl_otros_no_imponibles',
+                    'cl_asig_manual_monto','cl_otros_descuentos','cl_anticipos','cl_prestamos'
+                ];
+                foreach ($numeric_fields as $nf) {
+                    if (CL_LIQ_Helpers::is_negative_number_input($data[$nf] ?? '')) {
+                        $error = __('No se permiten valores negativos en el formulario.', 'liquidaciones-cl');
+                        CL_LIQ_Helpers::plugin_log('warning', 'Validación frontend rechazada: valor negativo', ['field' => $nf]);
+                        break;
+                    }
+                }
+
+                if (!$error && ($empleado_id <= 0 || $periodo_id <= 0)) {
                     $error = 'Debes seleccionar empleado y período.';
                 } else {
                     if (!$is_edit) {
@@ -464,6 +491,10 @@ final class CL_LIQ_Frontend {
                             wp_update_post(['ID' => $liq_id, 'post_title' => $title]);
                         }
 
+                        if (class_exists('CL_LIQ_Audit')) {
+                            CL_LIQ_Audit::log_post_change($liq_id, 'cl_liquidacion', 'frontend_save');
+                        }
+
                         wp_redirect($base . 'editar/' . $liq_id . '/?msg=saved');
                         exit;
                     }
@@ -531,10 +562,10 @@ final class CL_LIQ_Frontend {
         echo '</div>';
 
         if ($msg === 'saved') {
-            echo '<div class="msg">Liquidación guardada y recalculada.</div>';
+            echo '<div class="msg" role="status" aria-live="polite">Liquidación guardada y recalculada.</div>';
         }
         if ($error) {
-            echo '<div class="err">' . esc_html($error) . '</div>';
+            echo '<div class="err" role="alert" aria-live="assertive">' . esc_html($error) . '</div>';
         }
 
         echo '<div class="card">';
@@ -737,7 +768,7 @@ final class CL_LIQ_Frontend {
         echo '</div>';
 
         if ($msg === 'saved') {
-            echo '<div class="msg">Empleado guardado.</div>';
+            echo '<div class="msg" role="status" aria-live="polite">Empleado guardado.</div>';
         }
 
         echo '<div class="card">';
@@ -751,7 +782,7 @@ final class CL_LIQ_Frontend {
         echo '</form>';
 
         echo '<div style="overflow:auto">';
-        echo '<table>';
+        echo '<table><caption class="sr-only">Listado de empleados</caption>';
         echo '<thead><tr><th>ID</th><th>Nombre</th><th>RUT</th><th>AFP</th><th>Salud</th><th>Acciones</th></tr></thead><tbody>';
 
         if ($q->have_posts()) {
@@ -824,7 +855,13 @@ final class CL_LIQ_Frontend {
                     }
 
                     if ($is_edit && !$error) {
-                        $rut = sanitize_text_field(wp_unslash($_POST['cl_rut'] ?? ''));
+                        $rut_raw = sanitize_text_field(wp_unslash($_POST['cl_rut'] ?? ''));
+                        if ($rut_raw !== '' && !CL_LIQ_Helpers::validate_rut($rut_raw)) {
+                            $error = __('RUT inválido. Verifica formato y dígito verificador.', 'liquidaciones-cl');
+                            CL_LIQ_Helpers::plugin_log('warning', 'Validación frontend rechazada: RUT inválido');
+                        }
+                        $rut = CL_LIQ_Helpers::format_rut($rut_raw);
+
                         $tipo_contrato = sanitize_text_field(wp_unslash($_POST['cl_tipo_contrato'] ?? 'indefinido'));
                         $afp = sanitize_text_field(wp_unslash($_POST['cl_afp'] ?? 'Modelo'));
                         $salud_tipo = sanitize_text_field(wp_unslash($_POST['cl_salud_tipo'] ?? 'FONASA'));
@@ -832,18 +869,24 @@ final class CL_LIQ_Frontend {
                         $cargas = max(0, (int) ($_POST['cl_cargas'] ?? 0));
                         $tramo = sanitize_text_field(wp_unslash($_POST['cl_tramo_asig'] ?? 'auto'));
 
-                        update_post_meta($emp_id, 'cl_rut', $rut);
-                        update_post_meta($emp_id, 'cl_tipo_contrato', $tipo_contrato);
-                        update_post_meta($emp_id, 'cl_afp', $afp);
-                        update_post_meta($emp_id, 'cl_salud_tipo', $salud_tipo);
-                        update_post_meta($emp_id, 'cl_isapre_plan_clp', $isapre_plan);
-                        update_post_meta($emp_id, 'cl_cargas', $cargas);
-                        update_post_meta($emp_id, 'cl_tramo_asig', $tramo);
+                        if (!$error) {
+                            update_post_meta($emp_id, 'cl_rut', $rut);
+                            update_post_meta($emp_id, 'cl_tipo_contrato', $tipo_contrato);
+                            update_post_meta($emp_id, 'cl_afp', $afp);
+                            update_post_meta($emp_id, 'cl_salud_tipo', $salud_tipo);
+                            update_post_meta($emp_id, 'cl_isapre_plan_clp', $isapre_plan);
+                            update_post_meta($emp_id, 'cl_cargas', $cargas);
+                            update_post_meta($emp_id, 'cl_tramo_asig', $tramo);
 
-                        $redir = $return;
-                        $sep = (strpos($redir, '?') === false) ? '?' : '&';
-                        wp_redirect($redir . $sep . 'msg=saved');
-                        exit;
+                            if (class_exists('CL_LIQ_Audit')) {
+                                CL_LIQ_Audit::log_post_change($emp_id, 'cl_empleado', 'frontend_save');
+                            }
+
+                            $redir = $return;
+                            $sep = (strpos($redir, '?') === false) ? '?' : '&';
+                            wp_redirect($redir . $sep . 'msg=saved');
+                            exit;
+                        }
                     }
                 }
             }
@@ -872,7 +915,7 @@ final class CL_LIQ_Frontend {
         echo '</div>';
 
         if ($error) {
-            echo '<div class="err">' . esc_html($error) . '</div>';
+            echo '<div class="err" role="alert" aria-live="assertive">' . esc_html($error) . '</div>';
         }
 
         echo '<div class="card">';
@@ -882,7 +925,7 @@ final class CL_LIQ_Frontend {
 
         echo '<div class="grid">';
         echo '<div><label>Nombre</label><input name="cl_emp_name" type="text" value="' . esc_attr($name) . '" required></div>';
-        echo '<div><label>RUT</label><input name="cl_rut" type="text" value="' . esc_attr($rut) . '" placeholder="12.345.678-9"></div>';
+        echo '<div><label>RUT</label><input id="clRutInput" name="cl_rut" type="text" value="' . esc_attr($rut) . '" placeholder="12.345.678-9"></div>';
         echo '</div>';
 
         echo '<div class="grid3" style="margin-top:12px">';
@@ -927,6 +970,8 @@ final class CL_LIQ_Frontend {
         echo '<a class="btn ghost" href="' . esc_url($return) . '">Cancelar</a>';
         echo '</div>';
 
+        echo '<script>(function(){var i=document.getElementById("clRutInput");if(!i)return;function f(v){v=(v||"").toUpperCase().replace(/[^0-9K]/g,"");if(v.length<2)return v;var b=v.slice(0,-1),d=v.slice(-1);var out="",c=0;for(var x=b.length-1;x>=0;x--){out=b.charAt(x)+out;c++;if(c%3===0&&x!==0)out="."+out;}return out+"-"+d;}i.addEventListener("blur",function(){i.value=f(i.value);});})();</script>';
+
         echo '</form>';
         echo '</div>';
 
@@ -965,7 +1010,7 @@ final class CL_LIQ_Frontend {
         echo '</div>';
 
         if ($msg === 'saved') {
-            echo '<div class="msg">Período guardado.</div>';
+            echo '<div class="msg" role="status" aria-live="polite">Período guardado.</div>';
         }
 
         echo '<div class="card">';
@@ -979,7 +1024,7 @@ final class CL_LIQ_Frontend {
         echo '</form>';
 
         echo '<div style="overflow:auto">';
-        echo '<table>';
+        echo '<table><caption class="sr-only">Listado de períodos</caption>';
         echo '<thead><tr><th>ID</th><th>Período</th><th>UF</th><th>Acciones</th></tr></thead><tbody>';
 
         $shown = 0;
@@ -1038,7 +1083,14 @@ final class CL_LIQ_Frontend {
             } else {
                 $ym = sanitize_text_field(wp_unslash($_POST['cl_ym'] ?? CL_LIQ_Helpers::current_ym()));
                 if (!preg_match('/^\d{4}-\d{2}$/', $ym)) {
-                    $error = 'Período inválido (usa YYYY-MM).';
+                    $error = __('Período inválido (usa YYYY-MM).', 'liquidaciones-cl');
+                    CL_LIQ_Helpers::plugin_log('warning', 'Validación frontend rechazada: período inválido');
+                } elseif (CL_LIQ_Helpers::period_exists($ym, $is_edit ? $per_id : 0)) {
+                    $error = __('Ya existe un período con ese YYYY-MM.', 'liquidaciones-cl');
+                    CL_LIQ_Helpers::plugin_log('warning', 'Validación frontend rechazada: período duplicado', ['ym' => $ym]);
+                } elseif (CL_LIQ_Helpers::is_negative_number_input($_POST['cl_uf_value'] ?? '')) {
+                    $error = __('UF inválida: no se permiten valores negativos.', 'liquidaciones-cl');
+                    CL_LIQ_Helpers::plugin_log('warning', 'Validación frontend rechazada: UF negativa', ['ym' => $ym]);
                 } else {
                     $uf = CL_LIQ_Helpers::parse_decimal($_POST['cl_uf_value'] ?? 0);
 
@@ -1061,6 +1113,10 @@ final class CL_LIQ_Frontend {
                     if ($is_edit && !$error) {
                         update_post_meta($per_id, 'cl_ym', $ym);
                         update_post_meta($per_id, 'cl_uf_value', $uf);
+
+                        if (class_exists('CL_LIQ_Audit')) {
+                            CL_LIQ_Audit::log_post_change($per_id, 'cl_periodo', 'frontend_save');
+                        }
 
                         $redir = $return;
                         $sep = (strpos($redir, '?') === false) ? '?' : '&';
@@ -1089,7 +1145,7 @@ final class CL_LIQ_Frontend {
         echo '</div>';
 
         if ($error) {
-            echo '<div class="err">' . esc_html($error) . '</div>';
+            echo '<div class="err" role="alert" aria-live="assertive">' . esc_html($error) . '</div>';
         }
 
         echo '<div class="card">';
