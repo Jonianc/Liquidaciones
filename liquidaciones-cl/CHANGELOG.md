@@ -1,6 +1,14 @@
 # Changelog
 
 Todos los cambios importantes de este plugin se documentan en este archivo.
+## [1.12.0] - 2026-03-06
+### Agregado
+- Nueva vista frontend de `Parámetros` en la ruta del módulo para editar configuración sin entrar a WP Admin.
+- Acciones frontend para guardar ajustes, ejecutar actualización mensual y aplicar rollback del último snapshot.
+
+### Cambiado
+- La navegación frontend ahora incluye acceso directo a `Parámetros`.
+- La sanitización de ajustes quedó reutilizable para admin y frontend sobre la misma opción `cl_liq_settings`.
 ## [1.11.0] - 2026-03-06
 ### Agregado
 - Nuevo renderer PDF interno con layout por bloques, tablas simples, metadata y soporte multipagina.

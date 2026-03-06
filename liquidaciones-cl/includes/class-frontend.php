@@ -65,6 +65,7 @@ final class CL_LIQ_Frontend {
         add_rewrite_rule('^' . $slug . '/periodos/?$', 'index.php?cl_liq_fe=1&cl_liq_view=periods', 'top');
         add_rewrite_rule('^' . $slug . '/periodos/nuevo/?$', 'index.php?cl_liq_fe=1&cl_liq_view=per_new', 'top');
         add_rewrite_rule('^' . $slug . '/periodos/editar/([0-9]+)/?$', 'index.php?cl_liq_fe=1&cl_liq_view=per_edit&cl_liq_id=$matches[1]', 'top');
+        add_rewrite_rule('^' . $slug . '/parametros/?$', 'index.php?cl_liq_fe=1&cl_liq_view=settings', 'top');
     }
 
     private static function require_auth() {
@@ -113,6 +114,9 @@ final class CL_LIQ_Frontend {
                 exit;
             case 'per_edit':
                 self::render_period_form($id);
+                exit;
+            case 'settings':
+                self::render_settings_page();
                 exit;
             default:
                 self::render_liq_list();
@@ -168,7 +172,7 @@ final class CL_LIQ_Frontend {
         echo '.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}';
         echo '.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}';
         echo 'label{font-size:13px;color:#374151;font-weight:600;display:block;margin:0 0 6px}';
-        echo 'input,select{width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;font-size:14px}';
+        echo 'input,select,textarea{width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;font-size:14px}';
         echo 'a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #2563eb;outline-offset:2px}';
         echo '.sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}';
         echo '.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}';
@@ -176,6 +180,7 @@ final class CL_LIQ_Frontend {
         echo '.msg{padding:10px 12px;border-radius:10px;background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;margin:0 0 12px}';
         echo '.err{padding:10px 12px;border-radius:10px;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;margin:0 0 12px}';
         echo '.muted{color:#6b7280}';
+        echo '.stack{display:grid;gap:12px}';
         echo '@media(max-width:820px){.grid,.grid3{grid-template-columns:1fr}.topbar{flex-direction:column;align-items:stretch}}';
         echo '</style>';
         echo '</head><body>';
@@ -193,17 +198,271 @@ final class CL_LIQ_Frontend {
             'liq' => ['Liquidaciones', $base],
             'emp' => ['Empleados', $base . 'empleados/'],
             'per' => ['Períodos', $base . 'periodos/'],
+            'set' => ['Parámetros', $base . 'parametros/'],
         ];
         echo '<div class="nav">';
         foreach ($tabs as $k => $t) {
             $cls = ($k === $active) ? 'active' : '';
             echo '<a class="' . esc_attr($cls) . '" href="' . esc_url($t[1]) . '">' . esc_html($t[0]) . '</a>';
         }
-        echo '<a href="' . esc_url(admin_url('admin.php?page=cl-liquidaciones-settings')) . '">Parámetros</a>';
         echo '<a href="' . esc_url(admin_url()) . '">WP Admin</a>';
         echo '</div>';
     }
 
+    private static function render_settings_page() {
+        $base = self::base_url();
+        $settings = CL_LIQ_Settings::get();
+        $message = '';
+        $error = '';
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (isset($_POST['cl_liq_fe_save_settings'])) {
+                $nonce = sanitize_text_field(wp_unslash($_POST['cl_liq_nonce'] ?? ''));
+                if (!wp_verify_nonce($nonce, 'cl_liq_fe_save_settings')) {
+                    $error = __('Nonce inválido.', 'liquidaciones-cl');
+                } else {
+                    $new = CL_LIQ_Settings::sanitize_settings($_POST['cl_liq'] ?? []);
+                    update_option(CL_LIQ_Settings::OPTION_KEY, $new, false);
+                    $settings = $new;
+                    $message = __('Parámetros guardados.', 'liquidaciones-cl');
+                }
+            } elseif (isset($_POST['cl_liq_fe_run_update'])) {
+                $nonce = sanitize_text_field(wp_unslash($_POST['cl_liq_run_update_nonce'] ?? ''));
+                if (!wp_verify_nonce($nonce, 'cl_liq_fe_run_update')) {
+                    $error = __('Nonce inválido.', 'liquidaciones-cl');
+                } elseif (!class_exists('CL_LIQ_Updater')) {
+                    $error = __('Updater no disponible.', 'liquidaciones-cl');
+                } else {
+                    $res = CL_LIQ_Updater::run_monthly_update(true);
+                    $message = (string) ($res['msg'] ?? '');
+                    if (!empty($res['changes']) && is_array($res['changes'])) {
+                        $parts = [];
+                        foreach ($res['changes'] as $k => $v) {
+                            $parts[] = $k . ':' . (string) $v;
+                        }
+                        if ($parts) {
+                            $message .= ' [' . implode(', ', $parts) . ']';
+                        }
+                    }
+                }
+            } elseif (isset($_POST['cl_liq_fe_rollback'])) {
+                $nonce = sanitize_text_field(wp_unslash($_POST['cl_liq_rollback_nonce'] ?? ''));
+                if (!wp_verify_nonce($nonce, 'cl_liq_fe_rollback')) {
+                    $error = __('Nonce inválido.', 'liquidaciones-cl');
+                } elseif (!class_exists('CL_LIQ_Updater')) {
+                    $error = __('Updater no disponible.', 'liquidaciones-cl');
+                } else {
+                    $res = CL_LIQ_Updater::rollback_last();
+                    $message = (string) ($res['msg'] ?? '');
+                }
+            }
+        }
+
+        $asig_json = wp_json_encode($settings['asignacion_familiar'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        $tax_json = wp_json_encode($settings['tax_tables'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        $au = wp_parse_args($settings['auto_update'] ?? [], [
+            'enabled' => 0,
+            'mode' => 'suggest',
+            'months_back' => 12,
+            'months_forward' => 3,
+            'uf_source' => 'copy_prev',
+            'uf_http_url' => '',
+        ]);
+        $lg = wp_parse_args($settings['logging'] ?? [], ['enabled' => 0, 'level' => 'error']);
+        $last_run_ym = class_exists('CL_LIQ_Updater') ? (string) get_option(CL_LIQ_Updater::OPT_LAST_RUN_YM, '') : '';
+        $last_run_ts = class_exists('CL_LIQ_Updater') ? (int) get_option(CL_LIQ_Updater::OPT_LAST_RUN_TS, 0) : 0;
+        $has_snap = class_exists('CL_LIQ_Updater') ? get_option(CL_LIQ_Updater::OPT_SNAPSHOT, null) : null;
+        $log = class_exists('CL_LIQ_Updater') ? CL_LIQ_Updater::get_log(8) : [];
+        $audit_log = class_exists('CL_LIQ_Audit') ? CL_LIQ_Audit::get_log(20) : [];
+
+        self::html_head('Parámetros');
+
+        echo '<div class="topbar">';
+        echo '<div>';
+        echo '<h1>Parámetros</h1>';
+        echo '<div class="note">Configura topes, comisiones, tablas tributarias y automatizaciones del plugin.</div>';
+        self::render_nav('set');
+        echo '</div>';
+        echo '<div class="row">';
+        echo '<a class="btn ghost" href="' . esc_url(admin_url('admin.php?page=cl-liquidaciones-settings')) . '">Abrir en admin</a>';
+        echo '</div>';
+        echo '</div>';
+
+        if ($message !== '') {
+            echo '<div class="msg" role="status" aria-live="polite">' . esc_html($message) . '</div>';
+        }
+        if ($error !== '') {
+            echo '<div class="err" role="alert" aria-live="assertive">' . esc_html($error) . '</div>';
+        }
+
+        echo '<div class="stack">';
+
+        echo '<div class="card">';
+        echo '<h2 style="margin-top:0">Actualización automática</h2>';
+        echo '<p class="note">Revisa parámetros antes de emitir una liquidación. El modo automático ayuda a preparar períodos y tablas, pero no reemplaza verificación.</p>';
+        if ($last_run_ym) {
+            echo '<p><strong>Última ejecución:</strong> ' . esc_html($last_run_ym) . ($last_run_ts ? ' (' . esc_html(wp_date('Y-m-d H:i', $last_run_ts)) . ')' : '') . '</p>';
+        } else {
+            echo '<p><strong>Última ejecución:</strong> —</p>';
+        }
+        echo '<div class="row">';
+        echo '<form method="post">';
+        echo '<input type="hidden" name="cl_liq_fe_run_update" value="1">';
+        wp_nonce_field('cl_liq_fe_run_update', 'cl_liq_run_update_nonce');
+        echo '<button class="btn" type="submit">Actualizar ahora</button>';
+        echo '</form>';
+        if (is_array($has_snap) && !empty($has_snap)) {
+            echo '<form method="post">';
+            echo '<input type="hidden" name="cl_liq_fe_rollback" value="1">';
+            wp_nonce_field('cl_liq_fe_rollback', 'cl_liq_rollback_nonce');
+            echo '<button class="btn ghost" type="submit">Rollback último snapshot</button>';
+            echo '</form>';
+        }
+        echo '</div>';
+        if (!empty($log)) {
+            echo '<div style="overflow:auto;margin-top:12px">';
+            echo '<table><thead><tr><th>Fecha</th><th>Tipo</th><th>Mensaje</th><th>Datos</th></tr></thead><tbody>';
+            foreach ($log as $row) {
+                $ts = (int) ($row['ts'] ?? 0);
+                $type = (string) ($row['type'] ?? '');
+                $msg = (string) ($row['message'] ?? '');
+                $data = $row['data'] ?? [];
+                echo '<tr>';
+                echo '<td>' . esc_html($ts ? wp_date('Y-m-d H:i', $ts) : '—') . '</td>';
+                echo '<td>' . esc_html($type) . '</td>';
+                echo '<td>' . esc_html($msg) . '</td>';
+                echo '<td><code>' . esc_html(wp_json_encode($data)) . '</code></td>';
+                echo '</tr>';
+            }
+            echo '</tbody></table>';
+            echo '</div>';
+        }
+        echo '</div>';
+
+        echo '<div class="card">';
+        echo '<h2 style="margin-top:0">Configuración</h2>';
+        echo '<form method="post">';
+        echo '<input type="hidden" name="cl_liq_fe_save_settings" value="1">';
+        wp_nonce_field('cl_liq_fe_save_settings', 'cl_liq_nonce');
+
+        echo '<h2>Auto-update (mensual)</h2>';
+        echo '<div class="grid">';
+        echo '<div><label><input type="checkbox" name="cl_liq[auto_update][enabled]" value="1" ' . checked((int) $au['enabled'], 1, false) . '> Habilitar tareas automáticas (WP-Cron)</label></div>';
+        echo '<div><label>Modo</label><select name="cl_liq[auto_update][mode]">';
+        echo '<option value="suggest" ' . selected($au['mode'], 'suggest', false) . '>Sugerir / preparar (recomendado)</option>';
+        echo '<option value="apply" ' . selected($au['mode'], 'apply', false) . '>Aplicar automático</option>';
+        echo '</select></div>';
+        echo '<div><label>Meses hacia atrás</label><input name="cl_liq[auto_update][months_back]" type="number" min="1" step="1" value="' . esc_attr((int) $au['months_back']) . '"></div>';
+        echo '<div><label>Meses hacia adelante</label><input name="cl_liq[auto_update][months_forward]" type="number" min="0" step="1" value="' . esc_attr((int) $au['months_forward']) . '"></div>';
+        echo '<div><label>Origen UF</label><select name="cl_liq[auto_update][uf_source]">';
+        echo '<option value="copy_prev" ' . selected($au['uf_source'], 'copy_prev', false) . '>Copiar UF del último período</option>';
+        echo '<option value="http" ' . selected($au['uf_source'], 'http', false) . '>HTTP (JSON) desde URL template</option>';
+        echo '</select></div>';
+        echo '<div><label>URL template UF</label><input name="cl_liq[auto_update][uf_http_url]" type="text" value="' . esc_attr((string) $au['uf_http_url']) . '" placeholder="https://.../{date}"></div>';
+        echo '</div>';
+        echo '<div class="note">Si eliges HTTP, usa una URL template con {date} en formato YYYY-MM-DD.</div>';
+
+        echo '<h2>Logging / Observabilidad</h2>';
+        echo '<div class="grid">';
+        echo '<div><label><input type="checkbox" name="cl_liq[logging][enabled]" value="1" ' . checked((int) $lg['enabled'], 1, false) . '> Activar logging</label></div>';
+        echo '<div><label>Nivel mínimo</label><select name="cl_liq[logging][level]">';
+        echo '<option value="error" ' . selected($lg['level'], 'error', false) . '>Error</option>';
+        echo '<option value="warning" ' . selected($lg['level'], 'warning', false) . '>Warning</option>';
+        echo '<option value="info" ' . selected($lg['level'], 'info', false) . '>Info</option>';
+        echo '<option value="debug" ' . selected($lg['level'], 'debug', false) . '>Debug</option>';
+        echo '</select></div>';
+        echo '</div>';
+
+        echo '<h2>Topes imponibles (UF)</h2>';
+        echo '<div class="grid">';
+        echo '<div><label>Tope AFP/Salud</label><input name="cl_liq[topes][tope_uf_afp_salud]" type="text" value="' . esc_attr($settings['topes']['tope_uf_afp_salud']) . '"></div>';
+        echo '<div><label>Tope Seguro Cesantía (AFC)</label><input name="cl_liq[topes][tope_uf_afc]" type="text" value="' . esc_attr($settings['topes']['tope_uf_afc']) . '"></div>';
+        echo '</div>';
+
+        echo '<h2>Comisiones AFP (mensual, % sobre imponible)</h2>';
+        echo '<div style="overflow:auto"><table><thead><tr><th>AFP</th><th>Comisión (%)</th></tr></thead><tbody>';
+        foreach ($settings['afp_commissions'] as $name => $rate) {
+            echo '<tr><td>' . esc_html($name) . '</td><td><input name="cl_liq[afp_commissions][' . esc_attr($name) . ']" type="text" value="' . esc_attr($rate * 100.0) . '"></td></tr>';
+        }
+        echo '</tbody></table></div>';
+
+        echo '<h2>AFC (aporte trabajador)</h2>';
+        $labels = [
+            'indefinido' => 'Indefinido',
+            'plazo_fijo' => 'Plazo fijo',
+            'obra' => 'Obra / Faena',
+            'casa_particular' => 'Casa particular',
+        ];
+        echo '<div style="overflow:auto"><table><thead><tr><th>Tipo contrato</th><th>Tasa trabajador (%)</th></tr></thead><tbody>';
+        foreach ($settings['afc_employee_rates'] as $k => $r) {
+            echo '<tr><td>' . esc_html($labels[$k] ?? $k) . '</td><td><input name="cl_liq[afc_employee_rates][' . esc_attr($k) . ']" type="text" value="' . esc_attr($r * 100.0) . '"></td></tr>';
+        }
+        echo '</tbody></table></div>';
+
+        echo '<h2>Horas extra</h2>';
+        echo '<div class="grid">';
+        echo '<div><label>Jornada mensual (horas)</label><input name="cl_liq[horas_extra][jornada_mensual_horas]" type="text" value="' . esc_attr($settings['horas_extra']['jornada_mensual_horas']) . '"></div>';
+        echo '<div><label>Recargo (ej: 0.5 = +50%)</label><input name="cl_liq[horas_extra][recargo]" type="text" value="' . esc_attr($settings['horas_extra']['recargo']) . '"></div>';
+        echo '</div>';
+
+        echo '<h2>Gratificación legal (opcional)</h2>';
+        echo '<div class="grid3">';
+        echo '<div><label>IMM (CLP)</label><input name="cl_liq[gratificacion][imm_clp]" type="text" value="' . esc_attr($settings['gratificacion']['imm_clp']) . '"></div>';
+        echo '<div><label>Factor tope</label><input name="cl_liq[gratificacion][tope_factor]" type="text" value="' . esc_attr($settings['gratificacion']['tope_factor']) . '"></div>';
+        echo '<div><label>Divisor tope</label><input name="cl_liq[gratificacion][tope_divisor]" type="text" value="' . esc_attr($settings['gratificacion']['tope_divisor']) . '"></div>';
+        echo '</div>';
+        echo '<div class="note">Si IMM es 0, el tope no se aplica.</div>';
+
+        echo '<h2>Asignación Familiar (JSON)</h2>';
+        echo '<div class="note">Estructura: {"tramos":[{"from":1,"to":631976,"amount":22007}]}</div>';
+        echo '<textarea name="cl_liq[asignacion_json]" rows="10">' . esc_textarea($asig_json) . '</textarea>';
+
+        echo '<h2>Tabla Impuesto Único (JSON)</h2>';
+        echo '<div class="note">Estructura: {"YYYY-MM":[{"from":0,"to":943501.50,"factor":0,"rebate":0}]}</div>';
+        echo '<textarea name="cl_liq[tax_json]" rows="14">' . esc_textarea($tax_json) . '</textarea>';
+
+        echo '<div class="row" style="margin-top:16px">';
+        echo '<button class="btn" type="submit">Guardar</button>';
+        echo '<a class="btn ghost" href="' . esc_url($base) . '">Volver a liquidaciones</a>';
+        echo '</div>';
+        echo '</form>';
+        echo '</div>';
+
+        echo '<div class="card">';
+        echo '<h2 style="margin-top:0">Auditoría operativa</h2>';
+        echo '<p class="note">Registra quién creó o actualizó entidades y acciones del updater. Se guardan hasta 200 eventos.</p>';
+        if (!empty($audit_log)) {
+            echo '<div style="overflow:auto"><table><thead><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Entidad</th><th>ID</th><th>Contexto</th><th>Cambios</th></tr></thead><tbody>';
+            foreach ($audit_log as $row) {
+                $ts = (int) ($row['ts'] ?? 0);
+                $uid = (int) ($row['user'] ?? 0);
+                $user = $uid > 0 ? get_userdata($uid) : null;
+                $uname = $user ? $user->user_login : 'sistema';
+                $action = (string) ($row['action'] ?? '');
+                $entity = (string) ($row['entity_type'] ?? '');
+                $eid = (int) ($row['entity_id'] ?? 0);
+                $ctx = (string) ($row['context'] ?? '');
+                $changes = $row['changes'] ?? [];
+                echo '<tr>';
+                echo '<td>' . esc_html($ts ? wp_date('Y-m-d H:i', $ts) : '—') . '</td>';
+                echo '<td>' . esc_html($uname) . '</td>';
+                echo '<td>' . esc_html($action) . '</td>';
+                echo '<td>' . esc_html($entity) . '</td>';
+                echo '<td>' . esc_html($eid ? (string) $eid : '—') . '</td>';
+                echo '<td>' . esc_html($ctx ?: '—') . '</td>';
+                echo '<td><code>' . esc_html(wp_json_encode($changes)) . '</code></td>';
+                echo '</tr>';
+            }
+            echo '</tbody></table></div>';
+        } else {
+            echo '<p>No hay eventos de auditoría todavía.</p>';
+        }
+        echo '</div>';
+
+        echo '</div>';
+
+        self::html_foot();
+    }
     // ----------------------------
     // Liquidaciones
     // ----------------------------

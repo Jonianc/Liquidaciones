@@ -186,7 +186,7 @@ final class CL_LIQ_Settings {
         echo '</div>';
     }
 
-    private static function sanitize_settings(array $in): array {
+    public static function sanitize_settings(array $in): array {
         $d = self::get(); // for structure
 
         // Topes UF
