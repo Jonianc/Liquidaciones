@@ -1,6 +1,14 @@
 # Changelog
 
 Todos los cambios importantes de este plugin se documentan en este archivo.
+## [1.11.0] - 2026-03-06
+### Agregado
+- Nuevo renderer PDF interno con layout por bloques, tablas simples, metadata y soporte multipagina.
+
+### Cambiado
+- La liquidacion PDF ahora usa cabecera estructurada, tarjetas de datos, tablas con totales y pie de pagina con numeracion.
+- El endpoint existente de PDF mantiene URL, permisos y nonce, pero deja de depender del generador lineal de una sola pagina.
+
 
 ## [1.10.0] - 2026-03-04
 ### Agregado
@@ -89,3 +97,4 @@ Todos los cambios importantes de este plugin se documentan en este archivo.
 ## [1.0.0]
 ### Agregado
 - Versión inicial (admin + cálculos + PDF).
+
