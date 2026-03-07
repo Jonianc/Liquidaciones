@@ -110,7 +110,11 @@ final class CL_LIQ_Meta_Boxes {
         $v['grat_tipo'] = $v['grat_tipo'] ?: 'ninguna';
 
         $empleados = get_posts(['post_type'=>'cl_empleado','numberposts'=>-1,'post_status'=>'any','orderby'=>'title','order'=>'ASC']);
-        $periodos = get_posts(['post_type'=>'cl_periodo','numberposts'=>-1,'post_status'=>'any','orderby'=>'title','order'=>'DESC']);
+        $period_items = class_exists('CL_LIQ_Updater') ? CL_LIQ_Updater::get_periods_for_selector($periodo_id) : [];
+        $periodos = [];
+        if (empty($period_items)) {
+            $periodos = get_posts(['post_type'=>'cl_periodo','numberposts'=>-1,'post_status'=>'any','orderby'=>'title','order'=>'DESC']);
+        }
 
         echo '<table class="form-table" role="presentation"><tbody>';
 
@@ -125,6 +129,15 @@ final class CL_LIQ_Meta_Boxes {
 
         echo '<tr><th scope="row">Período</th><td><select name="cl_liq[cl_periodo_id]" required>';
         echo '<option value="">— Selecciona —</option>';
+        foreach ($period_items as $item) {
+            $pid = (int) ($item['id'] ?? 0);
+            if ($pid <= 0) continue;
+            $label = (string) ($item['label'] ?? '');
+            if ($label === '') {
+                $label = (string) get_the_title($pid);
+            }
+            echo '<option value="' . esc_attr($pid) . '" ' . selected($periodo_id, $pid, false) . '>' . esc_html($label) . '</option>';
+        }
         foreach ($periodos as $p) {
             $ym = get_post_meta($p->ID, 'cl_ym', true);
             $label = $ym ? CL_LIQ_Helpers::ym_label($ym) : $p->post_title;

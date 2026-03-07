@@ -863,6 +863,15 @@ final class CL_LIQ_Frontend {
         echo '<div>';
         echo '<label>Período</label><select name="cl_liq[cl_periodo_id]" required>';
         echo '<option value="">— Selecciona —</option>';
+        foreach ($period_items as $item) {
+            $pid = (int) ($item['id'] ?? 0);
+            if ($pid <= 0) continue;
+            $label = (string) ($item['label'] ?? '');
+            if ($label === '') {
+                $label = (string) get_the_title($pid);
+            }
+            echo '<option value="' . esc_attr($pid) . '" ' . selected($periodo_id, $pid, false) . '>' . esc_html($label) . '</option>';
+        }
         foreach ($periodos as $p) {
             $ym = get_post_meta($p->ID, 'cl_ym', true);
             $label = $ym ? CL_LIQ_Helpers::ym_label($ym) : $p->post_title;

@@ -1,6 +1,10 @@
 # Changelog
 
 Todos los cambios importantes de este plugin se documentan en este archivo.
+## [1.12.1] - 2026-03-07
+### Corregido
+- El selector de períodos en el formulario de liquidaciones (admin y frontend) ahora utiliza la ventana automática del updater y vuelve a mostrar períodos incluso sin carga manual previa.
+
 ## [1.12.0] - 2026-03-06
 ### Agregado
 - Nueva vista frontend de `Parámetros` en la ruta del módulo para editar configuración sin entrar a WP Admin.
